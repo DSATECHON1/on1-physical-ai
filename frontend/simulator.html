@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>ON1 Physical AI — Mission Simulator</title>
+
+  <meta
+    name="description"
+    content="ON1 Physical AI browser-based mission simulator for machine identity, mission execution, telemetry, evidence, validation, memory, and reputation."
+  >
+
+  <style>
+    :root {
+      --bg: #071018;
+      --panel: #0d1721;
+      --panel-2: #101e2a;
+      --border: #1d3445;
+      --text: #edf6fb;
+      --muted: #8da5b5;
+      --accent: #39d9ff;
+      --success: #46e6a5;
+      --warning: #ffd166;
+      --danger: #ff6b7a;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top right, rgba(57, 217, 255, 0.08), transparent 30%),
+        linear-gradient(180deg, #071018 0%, #08121a 100%);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .container {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+    }
+
+    header {
+      padding: 22px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 42px;
+      height: 42px;
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      color: var(--accent);
+      background: rgba(57, 217, 255, 0.06);
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: 17px;
+    }
+
+    .brand-subtitle {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 3px;
+    }
+
+    main {
+      padding: 32px 0 50px;
+    }
+
+    .hero {
+      margin-bottom: 24px;
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(30px, 6vw, 48px);
+      line-height: 1.05;
+    }
+
+    .hero p {
+      max-width: 760px;
+      color: var(--muted);
+      line-height: 1.65;
+      margin: 14px 0 0;
+    }
+
+    .notice {
+      margin-top: 20px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.025);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .notice strong {
+      color: var(--warning);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+    }
+
+    .card {
+      grid-column: span 6;
+      background: linear-gradient(180deg, var(--panel), #0a151e);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .card.full {
+      grid-column: span 12;
+    }
+
+    .card h2 {
+      margin: 0 0 16px;
+      font-size: 17px;
+    }
+
+    .section-label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+
+    .machine-id {
+      font-size: 21px;
+      font-weight: 800;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 9px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .status.running {
+      color: var(--accent);
+    }
+
+    .status.running .status-dot {
+      background: var(--accent);
+    }
+
+    .status.success {
+      color: var(--success);
+    }
+
+    .status.success .status-dot {
+      background: var(--success);
+    }
+
+    .mission-map {
+      position: relative;
+      height: 270px;
+      margin-top: 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      background:
+        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
+        #08141d;
+      background-size: 27px 27px;
+    }
+
+    .map-label {
+      position: absolute;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .start-label {
+      left: 14px;
+      bottom: 12px;
+    }
+
+    .target-label {
+      right: 14px;
+      top: 12px;
+    }
+
+    .target {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      right: 11%;
+      top: 12%;
+      border: 2px solid var(--warning);
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(255, 209, 102, .4);
+    }
+
+    .robot {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      left: 9%;
+      bottom: 9%;
+      border-radius: 7px;
+      background: var(--accent);
+      box-shadow: 0 0 22px rgba(57, 217, 255, .65);
+      transform: translate(-50%, 50%);
+      transition:
+        left .45s linear,
+        bottom .45s linear;
+    }
+
+    .robot::after {
+      content: "";
+      position: absolute;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #071018;
+      left: 7px;
+      top: 7px;
+    }
+
+    .telemetry {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .metric {
+      padding: 12px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .metric-value {
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .metric-label {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      color: #061018;
+      background: var(--accent);
+    }
+
+    button:hover {
+      filter: brightness(1.08);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: .45;
+      filter: none;
+    }
+
+    button.secondary {
+      color: var(--text);
+      background: #172733;
+      border: 1px solid var(--border);
+    }
+
+    .checks {
+      display: grid;
+      gap: 9px;
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 11px 12px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 13px;
+    }
+
+    .check-name {
+      color: var(--muted);
+    }
+
+    .pass {
+      color: var(--success);
+      font-weight: 800;
+    }
+
+    .pending {
+      color: var(--warning);
+      font-weight: 800;
+    }
+
+    .score {
+      font-size: 46px;
+      font-weight: 900;
+      color: var(--success);
+      margin: 4px 0;
+    }
+
+    .score-label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .progress {
+      height: 9px;
+      border-radius: 99px;
+      overflow: hidden;
+      margin-top: 14px;
+      background: #172733;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: var(--success);
+      transition: width .4s ease;
+    }
+
+    .evidence {
+      min-height: 170px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #071119;
+      overflow: auto;
+    }
+
+    pre {
+      margin: 0;
+      color: #c5d8e3;
+      font-family: Consolas, Monaco, monospace;
+      font-size: 12px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .memory-entry {
+      padding: 13px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      border-radius: 10px;
+    }
+
+    .memory-title {
+      font-weight: 800;
+    }
+
+    .memory-meta {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 5px;
+    }
+
+    footer {
+      padding: 24px 0 34px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    @media (max-width: 760px) {
+      .card,
+      .card.full {
+        grid-column: span 12;
+      }
+
+      .telemetry {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .mission-map {
+        height: 230px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <div class="container">
+    <div class="brand">
+      <div class="logo">ON1</div>
+
+      <div>
+        <div class="brand-title">ON1 Physical AI</div>
+        <div class="brand-subtitle">Machine Intelligence Infrastructure</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="container">
+
+    <section class="hero">
+      <div class="eyebrow">Interactive Prototype</div>
+
+      <h1>Physical AI Mission Simulator</h1>
+
+      <p>
+        Simulate a machine receiving a mission, executing a task,
+        producing telemetry and evidence, passing validation,
+        updating reputation, and recording machine memory.
+      </p>
+
+      <div class="notice">
+        <strong>Prototype notice:</strong>
+        This is a browser-based software simulation. It does not control
+        physical hardware and does not represent a live Konnex network
+        transaction or on-chain verification.
+      </div>
+    </section>
+
+    <section class="grid">
+
+      <!-- MACHINE -->
+      <div class="card">
+        <h2>Machine Identity</h2>
+
+        <div class="section-label">Registered Machine</div>
+        <div class="machine-id">ON1-R001</div>
+
+        <div id="machineStatus" class="status">
+          <span class="status-dot"></span>
+          IDLE
+        </div>
+
+        <div style="margin-top:18px;">
+          <div class="section-label">Identity</div>
+          <strong>ON1-MACHINE-001</strong>
+        </div>
+
+        <div style="margin-top:14px;">
+          <div class="section-label">Model</div>
+          <span style="color:var(--muted);">ON1 Virtual Navigator</span>
+        </div>
+
+        <div style="margin-top:14px;">
+          <div class="section-label">Operating Mode</div>
+          <span style="color:var(--muted);">Software Simulation</span>
+        </div>
+
+        <div class="button-row">
+          <button id="runButton">Run Mission</button>
+          <button id="resetButton" class="secondary">Reset</button>
+        </div>
+      </div>
+
+      <!-- MISSION -->
+      <div class="card">
+        <h2>Mission</h2>
+
+        <div class="section-label">Task Type</div>
+        <strong>Navigation</strong>
+
+        <div style="margin-top:14px;">
+          <div class="section-label">Route</div>
+          <span style="color:var(--muted);">
+            (0, 0) → (10, 10)
+          </span>
+        </div>
+
+        <div class="mission-map">
+          <div class="map-label start-label">START (0,0)</div>
+          <div class="map-label target-label">TARGET (10,10)</div>
+
+          <div id="target" class="target"></div>
+          <div id="robot" class="robot"></div>
+        </div>
+      </div>
+
+      <!-- TELEMETRY -->
+      <div class="card full">
+        <h2>Live Telemetry</h2>
+
+        <div class="telemetry">
+          <div class="metric">
+            <div id="stepValue" class="metric-value">0</div>
+            <div class="metric-label">STEP</div>
+          </div>
+
+          <div class="metric">
+            <div id="positionValue" class="metric-value">(0, 0)</div>
+            <div class="metric-label">POSITION</div>
+          </div>
+
+          <div class="metric">
+            <div id="distanceValue" class="metric-value">14.14</div>
+            <div class="metric-label">DISTANCE TO TARGET</div>
+          </div>
+
+          <div class="metric">
+            <div id="batteryValue" class="metric-value">100%</div>
+            <div class="metric-label">BATTERY</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VALIDATION -->
+      <div class="card">
+        <h2>Evidence Validation</h2>
+
+        <div class="checks">
+
+          <div class="check">
+            <span class="check-name">Mission Started</span>
+            <span id="checkStarted" class="pending">PENDING</span>
+          </div>
+
+          <div class="check">
+            <span class="check-name">Mission Completed</span>
+            <span id="checkCompleted" class="pending">PENDING</span>
+          </div>
+
+          <div class="check">
+            <span class="check-name">Telemetry Present</span>
+            <span id="checkTelemetry" class="pending">PENDING</span>
+          </div>
+
+          <div class="check">
+            <span class="check-name">Target Reached</span>
+            <span id="checkTarget" class="pending">PENDING</span>
+          </div>
+
+          <div class="check">
+            <span class="check-name">Robot Identity Present</span>
+            <span id="checkIdentity" class="pending">PENDING</span>
+          </div>
+
+          <div class="check">
+            <span class="check-name">Evidence Generated</span>
+            <span id="checkEvidence" class="pending">PENDING</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- SCORE -->
+      <div class="card">
+        <h2>PoPW-Style Validation Score</h2>
+
+        <div id="scoreValue" class="score">0</div>
+        <div class="score-label">Validation score</div>
+
+        <div class="progress">
+          <div id="scoreBar" class="progress-bar"></div>
+        </div>
+
+        <div style="margin-top:18px;">
+          <div class="section-label">Verification Result</div>
+          <strong id="verificationResult" style="color:var(--muted);">
+            NOT VERIFIED
+          </strong>
+        </div>
+      </div>
+
+      <!-- EVIDENCE -->
+      <div class="card full">
+        <h2>Mission Evidence Bundle</h2>
+
+        <div class="evidence">
+          <pre id="evidenceOutput">No mission evidence generated yet.</pre>
+        </div>
+      </div>
+
+      <!-- REPUTATION -->
+      <div class="card">
+        <h2>Machine Reputation</h2>
+
+        <div class="section-label">Robot</div>
+        <strong>ON1-R001</strong>
+
+        <div style="margin-top:18px;">
+          <div class="score" style="font-size:38px;" id="reputationValue">
+            50
+          </div>
+          <div class="score-label">Reputation score / 100</div>
+        </div>
+
+        <div style="margin-top:18px;">
+          <div class="section-label">Successful Missions</div>
+          <strong id="successfulMissions">0</strong>
+        </div>
+
+        <div style="margin-top:12px;">
+          <div class="section-label">Failed Missions</div>
+          <strong id="failedMissions">0</strong>
+        </div>
+      </div>
+
+      <!-- MEMORY -->
+      <div class="card">
+        <h2>Machine Memory</h2>
+
+        <div id="memoryEntry" class="memory-entry">
+          <div class="memory-title">No mission memory yet</div>
+          <div class="memory-meta">
+            Run a mission to create the first machine-memory record.
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </div>
+</main>
+
+<footer>
+  ON1 Physical AI — A DSATECHON1 initiative
+</footer>
+
+<script>
+  /*
+   * ON1 Physical AI
+   * Browser Mission Simulator
+   *
+   * This simulation mirrors the software prototype model:
+   * Identity → Mission → Telemetry → Evidence →
+   * Validation → Reputation → Memory
+   *
+   * It does not connect to Konnex or physical hardware.
+   */
+
+  const state = {
+    robot: {
+      robotId: "ON1-R001",
+      identity: "ON1-MACHINE-001",
+      model: "ON1 Virtual Navigator",
+      status: "IDLE",
+      reputationScore: 50,
+      successfulMissions: 0,
+      failedMissions: 0,
+      memory: []
+    },
+
+    mission: {
+      missionId: null,
+      taskType: "Navigation",
+      start: { x: 0, y: 0 },
+      target: { x: 10, y: 10 },
+      telemetry: [],
+      evidence: null,
+      validatorResult: null,
+      powpScore: 0,
+      status: "PENDING"
+    },
+
+    running: false,
+    timer: null
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  function utcNow() {
+    return new Date().toISOString();
+  }
+
+  function generateId(prefix) {
+    return prefix + "-" +
+      Date.now().toString(36).toUpperCase() +
+      "-" +
+      Math.random().toString(36).slice(2, 7).toUpperCase();
+  }
+
+  function distance(a, b) {
+    return Math.sqrt(
+      Math.pow(b.x - a.x, 2) +
+      Math.pow(b.y - a.y, 2)
+    );
+  }
+
+  function setStatus(text, type = "") {
+    const element = $("machineStatus");
+
+    element.className = "status " + type;
+
+    element.innerHTML =
+      '<span class="status-dot"></span>' + text;
+  }
+
+  function updateTelemetry(point) {
+    $("stepValue").textContent = point.step;
+    $("positionValue").textContent =
+      "(" + point.x.toFixed(1) + ", " + point.y.toFixed(1) + ")";
+
+    $("distanceValue").textContent =
+      point.distanceFromTarget.toFixed(2);
+
+    $("batteryValue").textContent =
+      Math.max(0, point.battery).toFixed(0) + "%";
+
+    /*
+     * Convert simulation coordinates into visual map percentages.
+     * x: 0 → 10
+     * y: 0 → 10
+     */
+    const xPercent = 9 + (point.x / 10) * 82;
+    const yPercent = 9 + (point.y / 10) * 82;
+
+    $("robot").style.left = xPercent + "%";
+    $("robot").style.bottom = yPercent + "%";
+  }
+
+  function setCheck(id, passed) {
+    const element = $(id);
+
+    if (passed) {
+      element.textContent = "PASSED";
+      element.className = "pass";
+    } else {
+      element.textContent = "PENDING";
+      element.className = "pending";
+    }
+  }
+
+  function resetChecks() {
+    [
+      "checkStarted",
+      "checkCompleted",
+      "checkTelemetry",
+      "checkTarget",
+      "checkIdentity",
+      "checkEvidence"
+    ].forEach(id => {
+      $(id).textContent = "PENDING";
+      $(id).className = "pending";
+    });
+  }
+
+  function resetMissionState() {
+    clearInterval(state.timer);
+
+    state.running = false;
+
+    state.robot.status = "IDLE";
+
+    state.mission = {
+      missionId: null,
+      taskType: "Navigation",
+      start: { x: 0, y: 0 },
+      target: { x: 10, y: 10 },
+      telemetry: [],
+      evidence: null,
+      validatorResult: null,
+      powpScore: 0,
+      status: "PENDING"
+    };
+
+    $("robot").style.left = "9%";
+    $("robot").style.bottom = "9%";
+
+    $("stepValue").textContent = "0";
+    $("positionValue").textContent = "(0, 0)";
+    $("distanceValue").textContent = "14.14";
+    $("batteryValue").textContent = "100%";
+
+    $("scoreValue").textContent = "0";
+    $("scoreBar").style.width = "0%";
+
+    $("verificationResult").textContent = "NOT VERIFIED";
+    $("verificationResult").style.color = "var(--muted)";
+
+    $("evidenceOutput").textContent =
+      "No mission evidence generated yet.";
+
+    $("memoryEntry").innerHTML = `
+      <div class="memory-title">No mission memory yet</div>
+      <div class="memory-meta">
+        Run a mission to create the first machine-memory record.
+      </div>
+    `;
+
+    state.robot.reputationScore = 50;
+    state.robot.successfulMissions = 0;
+    state.robot.failedMissions = 0;
+    state.robot.memory = [];
+
+    $("reputationValue").textContent = "50";
+    $("successfulMissions").textContent = "0";
+    $("failedMissions").textContent = "0";
+
+    resetChecks();
+
+    setStatus("IDLE");
+
+    $("runButton").disabled = false;
+    $("runButton").textContent = "Run Mission";
+  }
+
+  function createEvidence() {
+    state.mission.evidence = {
+      evidenceId: generateId("EVD"),
+      missionId: state.mission.missionId,
+      robotId: state.robot.robotId,
+      taskType: state.mission.taskType,
+
+      startPosition: state.mission.start,
+      targetPosition: state.mission.target,
+
+      telemetryPoints: state.mission.telemetry.length,
+
+      missionStartedAt:
+        state.mission.startedAt,
+
+      missionCompletedAt:
+        state.mission.completedAt,
+
+      status:
+        state.mission.status,
+
+      generatedAt:
+        utcNow()
+    };
+
+    $("evidenceOutput").textContent =
+      JSON.stringify(state.mission.evidence, null, 2);
+  }
+
+  function validateMission() {
+    const checks = {
+      missionStarted:
+        Boolean(state.mission.startedAt),
+
+      missionCompleted:
+        state.mission.status === "COMPLETED" &&
+        Boolean(state.mission.completedAt),
+
+      telemetryPresent:
+        state.mission.telemetry.length > 0,
+
+      targetReached:
+        state.mission.telemetry.length > 0 &&
+        distance(
+          state.mission.telemetry[
+            state.mission.telemetry.length - 1
+          ],
+          state.mission.target
+        ) < 0.01,
+
+      robotIdentityPresent:
+        Boolean(state.robot.identity),
+
+      evidenceGenerated:
+        Boolean(state.mission.evidence)
+    };
+
+    const passed =
+      Object.values(checks)
+        .filter(Boolean)
+        .length;
+
+    const total =
+      Object.keys(checks).length;
+
+    state.mission.powpScore =
+      Math.round((passed / total) * 100);
+
+    state.mission.validatorResult = {
+      validatorId: "ON1-BROWSER-VALIDATOR-001",
+      validatedAt: utcNow(),
+      checks: checks,
+      passedChecks: passed,
+      totalChecks: total,
+      verified:
+        passed === total &&
+        state.mission.status === "COMPLETED"
+    };
+
+    setCheck("checkStarted", checks.missionStarted);
+    setCheck("checkCompleted", checks.missionCompleted);
+    setCheck("checkTelemetry", checks.telemetryPresent);
+    setCheck("checkTarget", checks.targetReached);
+    setCheck("checkIdentity", checks.robotIdentityPresent);
+    setCheck("checkEvidence", checks.evidenceGenerated);
+
+    $("scoreValue").textContent =
+      state.mission.powpScore;
+
+    $("scoreBar").style.width =
+      state.mission.powpScore + "%";
+
+    if (state.mission.validatorResult.verified) {
+      $("verificationResult").textContent = "VERIFIED";
+      $("verificationResult").style.color =
+        "var(--success)";
+    } else {
+      $("verificationResult").textContent =
+        "NOT VERIFIED";
+      $("verificationResult").style.color =
+        "var(--danger)";
+    }
+  }
+
+  function updateReputation() {
+    if (
+      state.mission.validatorResult &&
+      state.mission.validatorResult.verified
+    ) {
+      state.robot.successfulMissions++;
+
+      /*
+       * Prototype reputation rule:
+       * successful verified mission = +5
+       */
+      state.robot.reputationScore =
+        Math.min(
+          100,
+          state.robot.reputationScore + 5
+        );
+    } else {
+      state.robot.failedMissions++;
+
+      state.robot.reputationScore =
+        Math.max(
+          0,
+          state.robot.reputationScore - 5
+        );
+    }
+
+    $("reputationValue").textContent =
+      state.robot.reputationScore.toFixed(0);
+
+    $("successfulMissions").textContent =
+      state.robot.successfulMissions;
+
+    $("failedMissions").textContent =
+      state.robot.failedMissions;
+  }
+
+  function updateMemory() {
+    const memory = {
+      memoryId: generateId("MEM"),
+      missionId: state.mission.missionId,
+      taskType: state.mission.taskType,
+      result:
+        state.mission.validatorResult.verified
+          ? "Verified"
+          : "Failed",
+      powpScore: state.mission.powpScore,
+      recordedAt: utcNow()
+    };
+
+    state.robot.memory.push(memory);
+
+    $("memoryEntry").innerHTML = `
+      <div class="memory-title">
+        ${memory.taskType} Mission
+      </div>
+
+      <div class="memory-meta">
+        Result: <strong>${memory.result}</strong>
+      </div>
+
+      <div class="memory-meta">
+        PoPW-style score: ${memory.powpScore}/100
+      </div>
+
+      <div class="memory-meta">
+        Memory ID: ${memory.memoryId}
+      </div>
+    `;
+  }
+
+  function completeMission() {
+    state.mission.status = "COMPLETED";
+    state.mission.completedAt = utcNow();
+
+    state.robot.status = "IDLE";
+
+    createEvidence();
+
+    validateMission();
+
+    updateReputation();
+
+    updateMemory();
+
+    setStatus("MISSION VERIFIED", "success");
+
+    $("runButton").disabled = false;
+    $("runButton").textContent = "Run Mission Again";
+  }
+
+  function runMission() {
+    if (state.running) {
+      return;
+    }
+
+    resetMissionState();
+
+    state.running = true;
+
+    state.robot.status = "EXECUTING";
+
+    state.mission.missionId =
+      generateId("MSN");
+
+    state.mission.status = "RUNNING";
+    state.mission.startedAt = utcNow();
+
+    setStatus("EXECUTING", "running");
+
+    setCheck("checkStarted", true);
+
+    $("runButton").disabled = true;
+    $("runButton").textContent = "Mission Running...";
+
+    let step = 0;
+
+    const totalSteps = 10;
+
+    state.timer = setInterval(() => {
+
+      step++;
+
+      const progress =
+        step / totalSteps;
+
+      const x =
+        state.mission.start.x +
+        (
+          state.mission.target.x -
+          state.mission.start.x
+        ) * progress;
+
+      const y =
+        state.mission.start.y +
+        (
+          state.mission.target.y -
+          state.mission.start.y
+        ) * progress;
+
+      const point = {
+        timestamp: utcNow(),
+        step: step,
+        x: x,
+        y: y,
+        distanceFromTarget:
+          distance(
+            { x: x, y: y },
+            state.mission.target
+          ),
+        battery:
+          100 - (step * 2),
+        speed: 1.0
+      };
+
+      state.mission.telemetry.push(point);
+
+      updateTelemetry(point);
+
+      if (step >= totalSteps) {
+        clearInterval(state.timer);
+
+        state.running = false;
+
+        /*
+         * Small delay makes the final
+         * validation state visually clear.
+         */
+        setTimeout(() => {
+          completeMission();
+        }, 500);
+      }
+
+    }, 450);
+  }
+
+  $("runButton").addEventListener(
+    "click",
+    runMission
+  );
+
+  $("resetButton").addEventListener(
+    "click",
+    resetMissionState
+  );
+
+  resetMissionState();
+</script>
+
+</body>
+</html>
