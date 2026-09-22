@@ -1,21 +1,22 @@
 """
 ON1 Physical AI
-Backend HTTP API
-
-Provides a lightweight HTTP interface for the ON1 Physical AI
-mission engine.
+Deployment-Ready Backend HTTP API
 
 Endpoints:
 
+GET  /
 GET  /health
 GET  /robot
 POST /missions
 
-Test mode:
+Environment:
 
-ON1_API_TEST=1 python backend/api.py
+PORT
+    Port supplied by the deployment platform.
+    Defaults to 8000 for local development.
 
-This runs an automated local API self-test and exits.
+ON1_API_TEST=1
+    Runs the automated API self-test and exits.
 
 This is a software prototype.
 
@@ -57,8 +58,20 @@ from main import (
 # CONFIGURATION
 # ============================================================
 
-HOST = "0.0.0.0"
-PORT = 8000
+HOST = os.environ.get(
+    "HOST",
+    "0.0.0.0",
+)
+
+try:
+    PORT = int(
+        os.environ.get(
+            "PORT",
+            "8000",
+        )
+    )
+except ValueError:
+    PORT = 8000
 
 
 # ============================================================
@@ -106,6 +119,11 @@ def send_json(
         "Content-Type",
     )
 
+    handler.send_header(
+        "Cache-Control",
+        "no-store",
+    )
+
     handler.end_headers()
 
     handler.wfile.write(
@@ -116,6 +134,7 @@ def send_json(
 def read_json_body(
     handler: BaseHTTPRequestHandler,
 ) -> dict[str, Any]:
+    """Read and decode a JSON request body."""
 
     content_length = handler.headers.get(
         "Content-Length"
@@ -171,10 +190,12 @@ class ON1PhysicalAIHandler(
 ):
 
     server_version = (
-        "ON1PhysicalAI/0.1"
+        "ON1PhysicalAI/0.2"
     )
 
     def do_OPTIONS(self) -> None:
+        """Handle browser CORS preflight requests."""
+
         self.send_response(204)
 
         self.send_header(
@@ -192,9 +213,16 @@ class ON1PhysicalAIHandler(
             "Content-Type",
         )
 
+        self.send_header(
+            "Access-Control-Max-Age",
+            "86400",
+        )
+
         self.end_headers()
 
     def do_GET(self) -> None:
+        """Handle GET requests."""
+
         parsed_url = urlparse(
             self.path
         )
@@ -219,6 +247,8 @@ class ON1PhysicalAIHandler(
         self.handle_not_found()
 
     def do_POST(self) -> None:
+        """Handle POST requests."""
+
         parsed_url = urlparse(
             self.path
         )
@@ -234,44 +264,26 @@ class ON1PhysicalAIHandler(
 
         self.handle_not_found()
 
-    def handle_health(self) -> None:
-        send_json(
-            self,
-            200,
-            {
-                "project": PROJECT_NAME,
-                "prototypeVersion": PROTOTYPE_VERSION,
-                "status": "online",
-                "service": "ON1 Physical AI Mission API",
-                "hardwareConnected": False,
-                "konnexIntegrated": False,
-                "onChainVerified": False,
-            },
-        )
-
-    def handle_robot(self) -> None:
-        send_json(
-            self,
-            200,
-            {
-                "project": PROJECT_NAME,
-                "robot": robot.to_dict(),
-                "hardwareConnected": False,
-                "konnexIntegrated": False,
-                "onChainVerified": False,
-            },
-        )
+    # ========================================================
+    # GET /
+    # ========================================================
 
     def handle_root(self) -> None:
+        """Return API information."""
+
         send_json(
             self,
             200,
             {
                 "project": PROJECT_NAME,
                 "prototypeVersion": PROTOTYPE_VERSION,
-                "service": "ON1 Physical AI Mission API",
+                "service": (
+                    "ON1 Physical AI Mission API"
+                ),
                 "status": "online",
+                "apiVersion": "0.2",
                 "endpoints": {
+                    "root": "GET /",
                     "health": "GET /health",
                     "robot": "GET /robot",
                     "missions": "POST /missions",
@@ -285,7 +297,56 @@ class ON1PhysicalAIHandler(
             },
         )
 
+    # ========================================================
+    # GET /health
+    # ========================================================
+
+    def handle_health(self) -> None:
+        """Return service health information."""
+
+        send_json(
+            self,
+            200,
+            {
+                "project": PROJECT_NAME,
+                "prototypeVersion": PROTOTYPE_VERSION,
+                "apiVersion": "0.2",
+                "status": "online",
+                "service": (
+                    "ON1 Physical AI Mission API"
+                ),
+                "hardwareConnected": False,
+                "konnexIntegrated": False,
+                "onChainVerified": False,
+            },
+        )
+
+    # ========================================================
+    # GET /robot
+    # ========================================================
+
+    def handle_robot(self) -> None:
+        """Return current virtual robot state."""
+
+        send_json(
+            self,
+            200,
+            {
+                "project": PROJECT_NAME,
+                "robot": robot.to_dict(),
+                "hardwareConnected": False,
+                "konnexIntegrated": False,
+                "onChainVerified": False,
+            },
+        )
+
+    # ========================================================
+    # POST /missions
+    # ========================================================
+
     def handle_create_mission(self) -> None:
+        """Create and execute a navigation mission."""
+
         request_data = read_json_body(
             self
         )
@@ -306,21 +367,63 @@ class ON1PhysicalAIHandler(
             },
         )
 
+        if not isinstance(
+            start,
+            dict,
+        ):
+            send_json(
+                self,
+                400,
+                {
+                    "error": (
+                        "Invalid start coordinates."
+                    )
+                },
+            )
+            return
+
+        if not isinstance(
+            target,
+            dict,
+        ):
+            send_json(
+                self,
+                400,
+                {
+                    "error": (
+                        "Invalid target coordinates."
+                    )
+                },
+            )
+            return
+
         try:
             start_x = int(
-                start.get("x", 0)
+                start.get(
+                    "x",
+                    0,
+                )
             )
 
             start_y = int(
-                start.get("y", 0)
+                start.get(
+                    "y",
+                    0,
+                )
             )
 
             target_x = int(
-                target.get("x", 10)
+                target.get(
+                    "x",
+                    10,
+                )
             )
 
             target_y = int(
-                target.get("y", 10)
+                target.get(
+                    "y",
+                    10,
+                )
             )
 
         except (
@@ -336,19 +439,20 @@ class ON1PhysicalAIHandler(
                     )
                 },
             )
-
             return
 
         try:
-            mission = engine.execute_navigation(
-                start=(
-                    start_x,
-                    start_y,
-                ),
-                target=(
-                    target_x,
-                    target_y,
-                ),
+            mission = (
+                engine.execute_navigation(
+                    start=(
+                        start_x,
+                        start_y,
+                    ),
+                    target=(
+                        target_x,
+                        target_y,
+                    ),
+                )
             )
 
             result = {
@@ -371,8 +475,11 @@ class ON1PhysicalAIHandler(
             )
 
             result["evidenceArtifact"] = {
-                "path": str(output_path),
+                "path": str(
+                    output_path
+                ),
                 "sha256": fingerprint,
+                "algorithm": "SHA-256",
                 "konnexVerified": False,
                 "onChainVerified": False,
             }
@@ -391,16 +498,26 @@ class ON1PhysicalAIHandler(
                     "error": (
                         "Mission execution failed."
                     ),
-                    "details": str(error),
+                    "details": str(
+                        error
+                    ),
                 },
             )
 
+    # ========================================================
+    # 404
+    # ========================================================
+
     def handle_not_found(self) -> None:
+        """Return a structured 404 response."""
+
         send_json(
             self,
             404,
             {
-                "error": "Endpoint not found",
+                "error": (
+                    "Endpoint not found"
+                ),
                 "availableEndpoints": [
                     "GET /",
                     "GET /health",
@@ -410,11 +527,17 @@ class ON1PhysicalAIHandler(
             },
         )
 
+    # ========================================================
+    # LOGGING
+    # ========================================================
+
     def log_message(
         self,
         format_string: str,
         *args: Any,
     ) -> None:
+        """Use a compact API log format."""
+
         print(
             f"[ON1 API] "
             f"{format_string % args}"
@@ -429,6 +552,7 @@ def create_server(
     host: str = HOST,
     port: int = PORT,
 ) -> ThreadingHTTPServer:
+    """Create the HTTP server."""
 
     return ThreadingHTTPServer(
         (
@@ -440,7 +564,12 @@ def create_server(
 
 
 def run_server() -> None:
+    """Start the deployment-ready API server."""
+
     server = create_server()
+
+    actual_host = server.server_address[0]
+    actual_port = server.server_address[1]
 
     print()
     print("=" * 60)
@@ -450,10 +579,11 @@ def run_server() -> None:
     print("=" * 60)
     print()
     print(
-        f"Server: http://{HOST}:{PORT}"
+        f"Server: http://{actual_host}:{actual_port}"
     )
     print()
     print("Endpoints:")
+    print("  GET  /")
     print("  GET  /health")
     print("  GET  /robot")
     print("  POST /missions")
@@ -496,6 +626,7 @@ def api_request(
     url: str,
     payload: dict[str, Any] | None = None,
 ) -> tuple[int, dict[str, Any]]:
+    """Send an HTTP request to the local test server."""
 
     data = None
 
@@ -529,8 +660,9 @@ def api_request(
                 response.status
             )
 
-            body = response.read().decode(
-                "utf-8"
+            body = (
+                response.read()
+                .decode("utf-8")
             )
 
     except HTTPError as error:
@@ -555,6 +687,7 @@ def assert_condition(
     condition: bool,
     message: str,
 ) -> None:
+    """Fail the self-test when a condition is false."""
 
     if not condition:
         raise RuntimeError(
@@ -569,7 +702,8 @@ def assert_condition(
 def run_self_test() -> None:
     """
     Start a temporary local API server,
-    verify all public endpoints, then stop it.
+    verify all public endpoints,
+    then stop it.
     """
 
     print()
@@ -585,7 +719,9 @@ def run_self_test() -> None:
         port=0,
     )
 
-    actual_port = server.server_address[1]
+    actual_port = (
+        server.server_address[1]
+    )
 
     server_thread = threading.Thread(
         target=server.serve_forever,
@@ -602,11 +738,41 @@ def run_self_test() -> None:
         time.sleep(0.1)
 
         # ----------------------------------------------------
-        # TEST 1 — HEALTH
+        # TEST 1 — ROOT
         # ----------------------------------------------------
 
         print(
-            "1. Testing GET /health ..."
+            "1. Testing GET / ..."
+        )
+
+        root_status, root = (
+            api_request(
+                "GET",
+                f"{base_url}/",
+            )
+        )
+
+        assert_condition(
+            root_status == 200,
+            "GET / did not return HTTP 200.",
+        )
+
+        assert_condition(
+            root.get("status")
+            == "online",
+            "Root API status is not online.",
+        )
+
+        print(
+            "   PASS — /"
+        )
+
+        # ----------------------------------------------------
+        # TEST 2 — HEALTH
+        # ----------------------------------------------------
+
+        print(
+            "2. Testing GET /health ..."
         )
 
         health_status, health = (
@@ -648,11 +814,11 @@ def run_self_test() -> None:
         )
 
         # ----------------------------------------------------
-        # TEST 2 — ROBOT
+        # TEST 3 — ROBOT
         # ----------------------------------------------------
 
         print(
-            "2. Testing GET /robot ..."
+            "3. Testing GET /robot ..."
         )
 
         robot_status, robot_data = (
@@ -695,11 +861,11 @@ def run_self_test() -> None:
         )
 
         # ----------------------------------------------------
-        # TEST 3 — CREATE MISSION
+        # TEST 4 — CREATE MISSION
         # ----------------------------------------------------
 
         print(
-            "3. Testing POST /missions ..."
+            "4. Testing POST /missions ..."
         )
 
         mission_status, mission_data = (
@@ -747,9 +913,11 @@ def run_self_test() -> None:
             "Mission telemetry is missing.",
         )
 
-        validator_result = mission.get(
-            "validatorResult",
-            {},
+        validator_result = (
+            mission.get(
+                "validatorResult",
+                {},
+            )
         )
 
         assert_condition(
@@ -831,6 +999,9 @@ def run_self_test() -> None:
         print(
             "  PoPW-style score    ✓"
         )
+        print(
+            "  SHA-256 fingerprint ✓"
+        )
         print()
         print(
             "Konnex integrated: False"
@@ -844,6 +1015,7 @@ def run_self_test() -> None:
     finally:
         server.shutdown()
         server.server_close()
+
         server_thread.join(
             timeout=5
         )
