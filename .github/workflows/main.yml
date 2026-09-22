@@ -1,4 +1,4 @@
-name: ON1 Physical AI Simulator
+name: ON1 Physical AI Prototype
 
 on:
   push:
@@ -10,11 +10,34 @@ on:
   workflow_dispatch:
 
 jobs:
-  simulate:
-    name: Run Virtual Robot Simulation
+
+  backend-test:
+    name: Run Backend Mission Engine
     runs-on: ubuntu-latest
 
     steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check Python version
+        run: python --version
+
+      - name: Run backend mission engine
+        run: python backend/main.py
+
+
+  simulator-test:
+    name: Run Software Simulator
+    runs-on: ubuntu-latest
+
+    steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -29,16 +52,16 @@ jobs:
       - name: Run ON1 Physical AI simulator
         run: python simulator/robot.py
 
-      - name: Verify evidence artifact
+      - name: Verify simulation evidence
         run: |
           test -f simulation_output/mission-result.json
-          echo "Evidence artifact created successfully."
+          echo "Simulation evidence artifact created successfully."
           echo "File size:"
           wc -c simulation_output/mission-result.json
 
-      - name: Upload mission evidence
+      - name: Upload simulation evidence
         uses: actions/upload-artifact@v4
         with:
-          name: on1-physical-ai-mission-evidence
+          name: on1-physical-ai-simulation-evidence
           path: simulation_output/mission-result.json
           if-no-files-found: error
