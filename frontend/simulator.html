@@ -322,6 +322,11 @@
       border: 1px solid var(--border);
     }
 
+    button.export {
+      color: #061018;
+      background: var(--success);
+    }
+
     .checks {
       display: grid;
       gap: 9px;
@@ -387,6 +392,21 @@
       border-radius: 12px;
       background: #071119;
       overflow: auto;
+    }
+
+    .export-area {
+      margin-top: 16px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .export-description {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+      margin-bottom: 12px;
     }
 
     pre {
@@ -628,6 +648,24 @@
         <div class="evidence">
           <pre id="evidenceOutput">No mission evidence generated yet.</pre>
         </div>
+
+        <div class="export-area">
+          <div class="section-label">Evidence Export</div>
+
+          <div class="export-description">
+            Export the completed browser simulation as a structured JSON
+            evidence artifact. This file records the prototype result and
+            does not represent Konnex or blockchain verification.
+          </div>
+
+          <button
+            id="exportButton"
+            class="export"
+            disabled
+          >
+            Export Evidence JSON
+          </button>
+        </div>
       </div>
 
       <!-- REPUTATION -->
@@ -746,6 +784,7 @@
 
   function updateTelemetry(point) {
     $("stepValue").textContent = point.step;
+
     $("positionValue").textContent =
       "(" + point.x.toFixed(1) + ", " + point.y.toFixed(1) + ")";
 
@@ -755,11 +794,6 @@
     $("batteryValue").textContent =
       Math.max(0, point.battery).toFixed(0) + "%";
 
-    /*
-     * Convert simulation coordinates into visual map percentages.
-     * x: 0 → 10
-     * y: 0 → 10
-     */
     const xPercent = 9 + (point.x / 10) * 82;
     const yPercent = 9 + (point.y / 10) * 82;
 
@@ -851,6 +885,8 @@
 
     $("runButton").disabled = false;
     $("runButton").textContent = "Run Mission";
+
+    $("exportButton").disabled = true;
   }
 
   function createEvidence() {
@@ -964,10 +1000,6 @@
     ) {
       state.robot.successfulMissions++;
 
-      /*
-       * Prototype reputation rule:
-       * successful verified mission = +5
-       */
       state.robot.reputationScore =
         Math.min(
           100,
@@ -1027,6 +1059,85 @@
     `;
   }
 
+  function createExportArtifact() {
+    return {
+      project: "ON1 Physical AI",
+
+      prototypeVersion: "0.3.0",
+
+      simulation: {
+        type: "browser",
+        hardwareConnected: false,
+        konnexIntegrated: false,
+        onChainVerified: false
+      },
+
+      generatedAt: utcNow(),
+
+      robot: {
+        robotId: state.robot.robotId,
+        identity: state.robot.identity,
+        model: state.robot.model,
+        status: state.robot.status,
+        reputationScore: state.robot.reputationScore,
+        successfulMissions: state.robot.successfulMissions,
+        failedMissions: state.robot.failedMissions,
+        memory: state.robot.memory
+      },
+
+      mission: {
+        missionId: state.mission.missionId,
+        taskType: state.mission.taskType,
+        start: state.mission.start,
+        target: state.mission.target,
+        startedAt: state.mission.startedAt,
+        completedAt: state.mission.completedAt,
+        telemetry: state.mission.telemetry,
+        evidence: state.mission.evidence,
+        validatorResult: state.mission.validatorResult,
+        powpScore: state.mission.powpScore,
+        status: state.mission.status
+      }
+    };
+  }
+
+  function exportEvidence() {
+    if (
+      !state.mission.validatorResult ||
+      !state.mission.validatorResult.verified
+    ) {
+      return;
+    }
+
+    const artifact = createExportArtifact();
+
+    const json = JSON.stringify(
+      artifact,
+      null,
+      2
+    );
+
+    const blob = new Blob(
+      [json],
+      { type: "application/json" }
+    );
+
+    const url =
+      URL.createObjectURL(blob);
+
+    const link =
+      document.createElement("a");
+
+    link.href = url;
+    link.download = "mission-result.json";
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+  }
+
   function completeMission() {
     state.mission.status = "COMPLETED";
     state.mission.completedAt = utcNow();
@@ -1040,6 +1151,13 @@
     updateReputation();
 
     updateMemory();
+
+    if (
+      state.mission.validatorResult &&
+      state.mission.validatorResult.verified
+    ) {
+      $("exportButton").disabled = false;
+    }
 
     setStatus("MISSION VERIFIED", "success");
 
@@ -1120,10 +1238,6 @@
 
         state.running = false;
 
-        /*
-         * Small delay makes the final
-         * validation state visually clear.
-         */
         setTimeout(() => {
           completeMission();
         }, 500);
@@ -1140,6 +1254,11 @@
   $("resetButton").addEventListener(
     "click",
     resetMissionState
+  );
+
+  $("exportButton").addEventListener(
+    "click",
+    exportEvidence
   );
 
   resetMissionState();
