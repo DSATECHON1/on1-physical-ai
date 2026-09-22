@@ -2,27 +2,38 @@
 ON1 Physical AI
 Virtual Robot Simulator
 
-This module simulates a physical robot completing a navigation mission.
-It generates:
-- Robot identity
+Software-first physical AI prototype for:
+- Machine identity
 - Mission execution
-- Position telemetry
-- Movement evidence
-- Mission result
-- Basic work verification data
+- Telemetry
+- Verifiable work evidence
+- Local validation
+- PoPW-style scoring
+- Machine memory
+- Reputation
 
-This is a software-only prototype.
-No physical hardware or Konnex network integration is claimed here.
+This is a simulation.
+It does not claim physical hardware or live Konnex integration.
 """
 
 from __future__ import annotations
 
+import json
 import math
 import time
 import uuid
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from typing import List, Dict, Any
+from pathlib import Path
+from typing import Any
+
+
+# ============================================================
+# Configuration
+# ============================================================
+
+OUTPUT_DIRECTORY = Path("simulation_output")
+OUTPUT_FILE = OUTPUT_DIRECTORY / "mission-result.json"
 
 
 # ============================================================
@@ -30,7 +41,7 @@ from typing import List, Dict, Any
 # ============================================================
 
 def utc_now() -> str:
-    """Return the current UTC time in ISO 8601 format."""
+    """Return the current UTC timestamp."""
     return datetime.now(timezone.utc).isoformat()
 
 
@@ -43,10 +54,13 @@ def distance_between(
     x1: float,
     y1: float,
     x2: float,
-    y2: float
+    y2: float,
 ) -> float:
-    """Calculate straight-line distance between two points."""
-    return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+    """Calculate Euclidean distance between two positions."""
+    return math.sqrt(
+        (x2 - x1) ** 2
+        + (y2 - y1) ** 2
+    )
 
 
 # ============================================================
@@ -55,26 +69,28 @@ def distance_between(
 
 @dataclass
 class Robot:
-    """
-    Represents a virtual machine participating in ON1 Physical AI.
-    """
+    """Represents a virtual machine."""
 
     robot_id: str
     identity: str
     model: str
+
     status: str = "IDLE"
+
     mission_count: int = 0
     successful_missions: int = 0
     failed_missions: int = 0
+
     reputation_score: float = 50.0
-    memory: List[Dict[str, Any]] = None
+
+    memory: list[dict[str, Any]] | None = None
 
     def __post_init__(self) -> None:
         if self.memory is None:
             self.memory = []
 
-    def register(self) -> Dict[str, Any]:
-        """Return the robot registration record."""
+    def register(self) -> dict[str, Any]:
+        """Create the robot registration record."""
 
         return {
             "robotId": self.robot_id,
@@ -86,25 +102,23 @@ class Robot:
         }
 
     def update_reputation(self, successful: bool) -> None:
-        """
-        Update robot reputation after a mission.
-
-        Successful missions increase reputation.
-        Failed missions decrease reputation.
-        """
+        """Update reputation after mission completion."""
 
         if successful:
-            self.reputation_score += 5
+            self.reputation_score += 5.0
         else:
-            self.reputation_score -= 5
+            self.reputation_score -= 5.0
 
-        self.reputation_score = max(
-            0.0,
-            min(100.0, self.reputation_score)
+        self.reputation_score = round(
+            max(
+                0.0,
+                min(100.0, self.reputation_score),
+            ),
+            2,
         )
 
-    def remember(self, mission: Dict[str, Any]) -> None:
-        """Store mission information in machine memory."""
+    def remember(self, mission: dict[str, Any]) -> None:
+        """Store a summary of completed work in machine memory."""
 
         memory_entry = {
             "missionId": mission["missionId"],
@@ -112,12 +126,13 @@ class Robot:
             "target": mission["target"],
             "status": mission["status"],
             "powpScore": mission["powpScore"],
+            "verified": mission["validatorResult"]["verified"],
             "completedAt": mission["completedAt"],
         }
 
         self.memory.append(memory_entry)
 
-        # Keep the latest 20 memories in this prototype.
+        # Keep the latest 20 memories.
         self.memory = self.memory[-20:]
 
 
@@ -127,12 +142,13 @@ class Robot:
 
 @dataclass
 class TelemetryPoint:
-    """A single robot telemetry observation."""
+    """One simulated robot telemetry observation."""
 
     timestamp: str
+    step: int
     x: float
     y: float
-    distanceFromTarget: float
+    distance_from_target: float
     battery: float
     speed: float
 
@@ -142,62 +158,62 @@ class TelemetryPoint:
 # ============================================================
 
 class Mission:
-    """
-    Represents a navigation mission assigned to a virtual robot.
-    """
+    """Represents a navigation mission."""
 
     def __init__(
         self,
         robot: Robot,
         start: tuple[float, float],
         target: tuple[float, float],
-        task_type: str = "NAVIGATION"
+        task_type: str = "NAVIGATION",
     ) -> None:
 
         self.mission_id = generate_id("MISSION")
+
         self.robot = robot
+
         self.start = start
         self.target = target
+
         self.task_type = task_type
 
         self.status = "CREATED"
+
         self.started_at: str | None = None
         self.completed_at: str | None = None
 
-        self.telemetry: List[TelemetryPoint] = []
+        self.telemetry: list[TelemetryPoint] = []
 
-        self.evidence: Dict[str, Any] = {}
-        self.validator_result: Dict[str, Any] = {}
+        self.evidence: dict[str, Any] = {}
+        self.validator_result: dict[str, Any] = {}
 
         self.powp_score = 0.0
 
     # --------------------------------------------------------
-    # Mission Execution
+    # Execute Mission
     # --------------------------------------------------------
 
-    def execute(self) -> Dict[str, Any]:
-        """
-        Execute the simulated navigation mission.
-        """
+    def execute(self) -> dict[str, Any]:
+        """Execute the simulated navigation mission."""
 
         self.robot.status = "WORKING"
+
         self.robot.mission_count += 1
 
         self.status = "RUNNING"
+
         self.started_at = utc_now()
 
-        current_x, current_y = self.start
-
-        target_x, target_y = self.target
-
         initial_distance = distance_between(
-            current_x,
-            current_y,
-            target_x,
-            target_y
+            self.start[0],
+            self.start[1],
+            self.target[0],
+            self.target[1],
         )
 
-        # Simulate movement in 10 steps.
+        current_x = self.start[0]
+        current_y = self.start[1]
+
         steps = 10
 
         for step in range(1, steps + 1):
@@ -206,53 +222,61 @@ class Mission:
 
             current_x = (
                 self.start[0]
-                + (self.target[0] - self.start[0]) * progress
+                + (
+                    self.target[0]
+                    - self.start[0]
+                )
+                * progress
             )
 
             current_y = (
                 self.start[1]
-                + (self.target[1] - self.start[1]) * progress
+                + (
+                    self.target[1]
+                    - self.start[1]
+                )
+                * progress
             )
 
             remaining_distance = distance_between(
                 current_x,
                 current_y,
-                target_x,
-                target_y
+                self.target[0],
+                self.target[1],
             )
 
             battery = max(
                 0.0,
-                100.0 - (step * 1.5)
+                100.0 - (step * 1.5),
             )
-
-            speed = 1.0
 
             telemetry_point = TelemetryPoint(
                 timestamp=utc_now(),
+                step=step,
                 x=round(current_x, 3),
                 y=round(current_y, 3),
-                distanceFromTarget=round(
+                distance_from_target=round(
                     remaining_distance,
-                    3
+                    3,
                 ),
-                battery=round(battery, 2),
-                speed=speed,
+                battery=round(
+                    battery,
+                    2,
+                ),
+                speed=1.0,
             )
 
             self.telemetry.append(
                 telemetry_point
             )
 
-            # Small delay makes local execution visibly simulate
-            # movement without creating a long-running process.
             time.sleep(0.05)
 
         final_distance = distance_between(
+            current_x,
+            current_y,
             self.target[0],
             self.target[1],
-            current_x,
-            current_y
         )
 
         self.completed_at = utc_now()
@@ -270,12 +294,14 @@ class Mission:
 
         self.build_evidence(
             initial_distance=initial_distance,
-            final_distance=final_distance
+            final_distance=final_distance,
         )
 
         self.validate()
 
-        self.robot.update_reputation(success)
+        self.robot.update_reputation(
+            successful=success
+        )
 
         result = self.to_dict()
 
@@ -290,41 +316,43 @@ class Mission:
     def build_evidence(
         self,
         initial_distance: float,
-        final_distance: float
+        final_distance: float,
     ) -> None:
-        """
-        Build a machine-work evidence bundle.
-
-        This represents the evidence that a future validator
-        could inspect.
-        """
+        """Create the machine-work evidence bundle."""
 
         self.evidence = {
             "evidenceId": generate_id("EVIDENCE"),
             "missionId": self.mission_id,
             "robotId": self.robot.robot_id,
             "taskType": self.task_type,
+
             "startPosition": {
                 "x": self.start[0],
                 "y": self.start[1],
             },
+
             "targetPosition": {
                 "x": self.target[0],
                 "y": self.target[1],
             },
+
             "initialDistance": round(
                 initial_distance,
-                3
+                3,
             ),
+
             "finalDistance": round(
                 final_distance,
-                3
+                3,
             ),
+
             "telemetryPoints": len(
                 self.telemetry
             ),
+
             "startedAt": self.started_at,
             "completedAt": self.completed_at,
+
             "status": self.status,
         }
 
@@ -334,34 +362,57 @@ class Mission:
 
     def validate(self) -> None:
         """
-        Perform basic local validation of the mission evidence.
+        Perform local evidence validation.
 
-        This is NOT yet a Konnex validator.
+        This is an ON1 Physical AI prototype validator.
+        It is not yet a Konnex validator.
         """
 
         checks = {
-            "missionStarted": self.started_at is not None,
-            "missionCompleted": self.completed_at is not None,
-            "telemetryPresent": len(self.telemetry) >= 2,
+            "missionStarted": (
+                self.started_at is not None
+            ),
+
+            "missionCompleted": (
+                self.completed_at is not None
+            ),
+
+            "telemetryPresent": (
+                len(self.telemetry) >= 2
+            ),
+
             "targetReached": (
-                self.evidence.get("finalDistance", 999)
+                self.evidence.get(
+                    "finalDistance",
+                    999.0,
+                )
                 <= 0.01
             ),
+
             "robotIdentityPresent": bool(
                 self.robot.robot_id
+            ),
+
+            "evidenceGenerated": bool(
+                self.evidence
             ),
         }
 
         passed_checks = sum(
-            1 for value in checks.values()
+            1
+            for value in checks.values()
             if value
         )
 
         total_checks = len(checks)
 
         self.powp_score = round(
-            (passed_checks / total_checks) * 100,
-            2
+            (
+                passed_checks
+                / total_checks
+            )
+            * 100,
+            2,
         )
 
         verified = (
@@ -370,25 +421,35 @@ class Mission:
         )
 
         self.validator_result = {
-            "validatorId": "ON1-LOCAL-VALIDATOR-001",
+            "validatorId": (
+                "ON1-LOCAL-VALIDATOR-001"
+            ),
+
             "validatedAt": utc_now(),
+
             "checks": checks,
+
             "passedChecks": passed_checks,
+
             "totalChecks": total_checks,
+
             "powpScore": self.powp_score,
+
             "verified": verified,
         }
 
     # --------------------------------------------------------
-    # Serialization
+    # Convert to Dictionary
     # --------------------------------------------------------
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Return the complete mission as a JSON-ready dictionary."""
+    def to_dict(self) -> dict[str, Any]:
+        """Return the complete mission record."""
 
         return {
             "missionId": self.mission_id,
+
             "robotId": self.robot.robot_id,
+
             "taskType": self.task_type,
 
             "start": {
@@ -402,42 +463,123 @@ class Mission:
             },
 
             "status": self.status,
+
             "startedAt": self.started_at,
+
             "completedAt": self.completed_at,
 
             "telemetry": [
-                asdict(point)
+                {
+                    "timestamp": point.timestamp,
+                    "step": point.step,
+                    "x": point.x,
+                    "y": point.y,
+                    "distanceFromTarget": (
+                        point.distance_from_target
+                    ),
+                    "battery": point.battery,
+                    "speed": point.speed,
+                }
                 for point in self.telemetry
             ],
 
             "evidence": self.evidence,
 
-            "validatorResult": self.validator_result,
+            "validatorResult": (
+                self.validator_result
+            ),
 
             "powpScore": self.powp_score,
 
-            "robotReputation": self.robot.reputation_score,
+            "robotReputation": (
+                self.robot.reputation_score
+            ),
         }
 
 
 # ============================================================
-# Demonstration
+# Save Evidence Artifact
 # ============================================================
 
-def run_demo() -> Dict[str, Any]:
-    """
-    Run one complete ON1 Physical AI simulation.
-    """
+def save_result(
+    robot: Robot,
+    mission_result: dict[str, Any],
+) -> Path:
+    """Save the complete simulation result as JSON."""
+
+    OUTPUT_DIRECTORY.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    result = {
+        "project": "ON1 Physical AI",
+
+        "prototypeVersion": "0.2.0",
+
+        "simulation": {
+            "type": "software-only",
+            "hardwareConnected": False,
+            "konnexIntegrated": False,
+        },
+
+        "generatedAt": utc_now(),
+
+        "robot": {
+            "robotId": robot.robot_id,
+            "identity": robot.identity,
+            "model": robot.model,
+            "status": robot.status,
+            "missionCount": robot.mission_count,
+            "successfulMissions": (
+                robot.successful_missions
+            ),
+            "failedMissions": (
+                robot.failed_missions
+            ),
+            "reputationScore": (
+                robot.reputation_score
+            ),
+            "memory": robot.memory,
+        },
+
+        "mission": mission_result,
+    }
+
+    OUTPUT_FILE.write_text(
+        json.dumps(
+            result,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    return OUTPUT_FILE
+
+
+# ============================================================
+# Demo
+# ============================================================
+
+def run_demo() -> dict[str, Any]:
+    """Run one complete ON1 Physical AI simulation."""
+
+    print("=" * 60)
+    print(
+        "ON1 PHYSICAL AI — "
+        "VIRTUAL ROBOT SIMULATOR"
+    )
+    print("=" * 60)
+
+    # --------------------------------------------------------
+    # Register Robot
+    # --------------------------------------------------------
 
     robot = Robot(
         robot_id="ON1-R001",
         identity="ON1-MACHINE-001",
         model="ON1-VIRTUAL-NAV-01",
     )
-
-    print("=" * 60)
-    print("ON1 PHYSICAL AI — VIRTUAL ROBOT SIMULATOR")
-    print("=" * 60)
 
     print("\n[1] Registering robot...")
 
@@ -455,7 +597,13 @@ def run_demo() -> Dict[str, Any]:
         f"Model: {registration['model']}"
     )
 
-    print("\n[2] Creating navigation mission...")
+    # --------------------------------------------------------
+    # Create Mission
+    # --------------------------------------------------------
+
+    print(
+        "\n[2] Creating navigation mission..."
+    )
 
     mission = Mission(
         robot=robot,
@@ -475,7 +623,13 @@ def run_demo() -> Dict[str, Any]:
         f"Target: {mission.target}"
     )
 
-    print("\n[3] Executing mission...")
+    # --------------------------------------------------------
+    # Execute
+    # --------------------------------------------------------
+
+    print(
+        "\n[3] Executing mission..."
+    )
 
     result = mission.execute()
 
@@ -484,30 +638,68 @@ def run_demo() -> Dict[str, Any]:
     )
 
     print(
-        f"Telemetry points: "
+        "Telemetry points: "
         f"{len(result['telemetry'])}"
     )
 
+    # --------------------------------------------------------
+    # Validation
+    # --------------------------------------------------------
+
     print(
-        f"PoPW score: "
+        "\n[4] Validating machine work..."
+    )
+
+    print(
+        "PoPW score: "
         f"{result['powpScore']}"
     )
 
     print(
-        f"Verified: "
+        "Verified: "
         f"{result['validatorResult']['verified']}"
     )
 
     print(
-        f"Robot reputation: "
-        f"{result['robotReputation']}"
+        "Validation checks: "
+        f"{result['validatorResult']['passedChecks']}"
+        "/"
+        f"{result['validatorResult']['totalChecks']}"
     )
 
-    print("\n[4] Machine memory updated.")
+    # --------------------------------------------------------
+    # Memory
+    # --------------------------------------------------------
 
     print(
-        f"Memory entries: "
+        "\n[5] Updating machine memory..."
+    )
+
+    print(
+        "Memory entries: "
         f"{len(robot.memory)}"
+    )
+
+    print(
+        "Robot reputation: "
+        f"{robot.reputation_score}"
+    )
+
+    # --------------------------------------------------------
+    # Save Evidence
+    # --------------------------------------------------------
+
+    print(
+        "\n[6] Creating evidence artifact..."
+    )
+
+    output_path = save_result(
+        robot=robot,
+        mission_result=result,
+    )
+
+    print(
+        f"Evidence saved to: {output_path}"
     )
 
     print("\n" + "=" * 60)
@@ -515,23 +707,14 @@ def run_demo() -> Dict[str, Any]:
     print("=" * 60)
 
     return {
-        "robot": {
-            "robotId": robot.robot_id,
-            "identity": robot.identity,
-            "model": robot.model,
-            "status": robot.status,
-            "missionCount": robot.mission_count,
-            "successfulMissions": robot.successful_missions,
-            "failedMissions": robot.failed_missions,
-            "reputationScore": robot.reputation_score,
-            "memory": robot.memory,
-        },
+        "robot": asdict(robot),
         "mission": result,
+        "evidenceFile": str(output_path),
     }
 
 
 # ============================================================
-# Main Entry Point
+# Main
 # ============================================================
 
 if __name__ == "__main__":
