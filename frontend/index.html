@@ -2,33 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>ON1 Physical AI — Machine Intelligence Infrastructure</title>
 
   <meta
     name="description"
-    content="ON1 Physical AI — a software-first physical AI prototype for machine identity, mission execution, verifiable work evidence, validation, memory, and reputation."
+    content="ON1 Physical AI is a software-first physical AI prototype exploring machine identity, mission execution, verifiable work evidence, validation, memory, and reputation."
   >
 
   <style>
     :root {
       --bg: #071018;
-      --panel: #0d1822;
-      --panel-2: #101f2b;
-      --border: #203441;
-      --text: #eef7fb;
-      --muted: #91a7b4;
-      --accent: #42d6a4;
-      --accent-2: #5bbcff;
-      --warning: #f3c969;
-      --danger: #ff7272;
-      --shadow: 0 18px 45px rgba(0, 0, 0, 0.25);
-      --radius: 18px;
+      --panel: #0d1721;
+      --panel-2: #101e2a;
+      --border: #1d3445;
+      --text: #edf6fb;
+      --muted: #8da5b5;
+      --accent: #39d9ff;
+      --success: #46e6a5;
+      --warning: #ffd166;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
     }
 
     * {
@@ -37,31 +31,29 @@
 
     body {
       margin: 0;
+      min-height: 100vh;
       background:
         radial-gradient(
           circle at top right,
-          rgba(66, 214, 164, 0.08),
+          rgba(57, 217, 255, 0.08),
           transparent 30%
         ),
-        var(--bg);
+        linear-gradient(
+          180deg,
+          #071018 0%,
+          #08121a 100%
+        );
       color: var(--text);
-      font-family:
-        Inter,
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
-      line-height: 1.5;
+      font-family: Arial, Helvetica, sans-serif;
     }
 
     .container {
-      width: min(1180px, 92%);
+      width: min(1180px, calc(100% - 28px));
       margin: 0 auto;
     }
 
     header {
-      padding: 28px 0 18px;
+      padding: 22px 0;
       border-bottom: 1px solid var(--border);
     }
 
@@ -71,239 +63,265 @@
       gap: 12px;
     }
 
-    .brand-mark {
+    .logo {
       width: 42px;
       height: 42px;
+      border: 1px solid var(--accent);
+      border-radius: 12px;
       display: grid;
       place-items: center;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: var(--panel);
       font-weight: 800;
       color: var(--accent);
+      background: rgba(57, 217, 255, 0.06);
     }
 
     .brand-title {
       font-weight: 800;
-      font-size: 18px;
+      font-size: 17px;
     }
 
     .brand-subtitle {
       color: var(--muted);
       font-size: 12px;
+      margin-top: 3px;
+    }
+
+    main {
+      padding: 34px 0 50px;
     }
 
     .hero {
-      padding: 46px 0 30px;
+      margin-bottom: 24px;
     }
 
     .eyebrow {
-      display: inline-block;
-      padding: 6px 10px;
-      border: 1px solid var(--border);
-      border-radius: 999px;
       color: var(--accent);
-      background: rgba(66, 214, 164, 0.05);
       font-size: 12px;
       font-weight: 700;
-      letter-spacing: 0.04em;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
+      margin-bottom: 10px;
     }
 
     h1 {
-      margin: 16px 0 10px;
-      max-width: 800px;
-      font-size: clamp(34px, 6vw, 62px);
-      line-height: 1.03;
-      letter-spacing: -0.04em;
+      margin: 0;
+      font-size: clamp(30px, 6vw, 48px);
+      line-height: 1.05;
     }
 
     .hero p {
-      max-width: 720px;
-      margin: 0;
+      max-width: 760px;
       color: var(--muted);
-      font-size: 17px;
+      line-height: 1.65;
+      margin: 14px 0 0;
     }
 
-    .notice {
-      margin-top: 24px;
+    .prototype-banner {
+      margin-top: 22px;
       padding: 15px 17px;
       border: 1px solid var(--border);
-      border-radius: 14px;
-      background: var(--panel);
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.025);
       color: var(--muted);
+      line-height: 1.6;
       font-size: 13px;
     }
 
-    .notice strong {
+    .prototype-banner strong {
       color: var(--warning);
     }
 
-    .metrics {
-      display: grid;
-      grid-template-columns:
-        repeat(4, minmax(0, 1fr));
-      gap: 14px;
-      margin: 24px 0;
-    }
-
-    .metric {
-      padding: 20px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+    .demo-card {
+      margin-top: 22px;
+      padding: 22px;
+      border: 1px solid rgba(57, 217, 255, 0.25);
+      border-radius: 16px;
+      background:
+        linear-gradient(
+          135deg,
+          rgba(57, 217, 255, 0.07),
+          rgba(255, 255, 255, 0.02)
+        );
       box-shadow: var(--shadow);
     }
 
-    .metric-label {
-      color: var(--muted);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+    .demo-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
     }
 
-    .metric-value {
-      margin-top: 8px;
-      font-size: 30px;
+    .demo-title {
+      font-size: 18px;
       font-weight: 800;
+      margin-bottom: 7px;
     }
 
-    .section {
-      margin: 34px 0;
-    }
-
-    .section-heading {
-      margin-bottom: 14px;
-    }
-
-    .section-heading h2 {
-      margin: 0;
-      font-size: 24px;
-    }
-
-    .section-heading p {
-      margin: 4px 0 0;
+    .demo-text {
       color: var(--muted);
+      line-height: 1.55;
+      font-size: 13px;
+      max-width: 700px;
+    }
+
+    .demo-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      padding: 12px 18px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #061018;
+      text-decoration: none;
       font-size: 14px;
+      font-weight: 800;
+      border: 1px solid var(--accent);
+    }
+
+    .demo-button:hover {
+      filter: brightness(1.08);
     }
 
     .grid {
       display: grid;
-      grid-template-columns:
-        repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(12, 1fr);
       gap: 16px;
+      margin-top: 22px;
     }
 
     .card {
-      padding: 20px;
-      background: var(--panel);
+      grid-column: span 6;
+      background:
+        linear-gradient(
+          180deg,
+          var(--panel),
+          #0a151e
+        );
       border: 1px solid var(--border);
-      border-radius: var(--radius);
+      border-radius: 16px;
+      padding: 20px;
       box-shadow: var(--shadow);
     }
 
-    .card h3 {
-      margin: 0 0 12px;
+    .card.full {
+      grid-column: span 12;
+    }
+
+    .card h2 {
+      margin: 0 0 16px;
       font-size: 17px;
     }
 
-    .machine {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: center;
-    }
-
-    .machine + .machine {
-      margin-top: 14px;
-      padding-top: 14px;
-      border-top: 1px solid var(--border);
-    }
-
-    .machine-name {
-      font-weight: 750;
+    .section-label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
     }
 
     .machine-id {
-      margin-top: 3px;
-      color: var(--muted);
-      font-size: 12px;
+      font-size: 21px;
+      font-weight: 800;
     }
 
     .status {
       display: inline-flex;
       align-items: center;
-      padding: 5px 9px;
+      gap: 7px;
+      margin-top: 9px;
+      padding: 7px 10px;
       border-radius: 999px;
-      font-size: 11px;
-      font-weight: 800;
-      background: rgba(66, 214, 164, 0.08);
-      color: var(--accent);
-      border: 1px solid rgba(66, 214, 164, 0.2);
-    }
-
-    .mission {
-      padding: 15px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .mission:last-child {
-      border-bottom: 0;
-      padding-bottom: 0;
-    }
-
-    .mission-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .mission-id {
-      font-weight: 750;
-    }
-
-    .mission-meta {
-      margin-top: 5px;
+      border: 1px solid var(--border);
       color: var(--muted);
       font-size: 12px;
     }
 
-    .score {
-      color: var(--accent-2);
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .metric {
+      padding: 13px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .metric-value {
+      font-size: 20px;
       font-weight: 800;
-      white-space: nowrap;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 5px;
     }
 
     .architecture {
       display: grid;
-      grid-template-columns:
-        repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(5, 1fr);
       gap: 10px;
     }
 
     .architecture-step {
-      position: relative;
-      padding: 17px 12px;
+      padding: 15px 12px;
       text-align: center;
-      border: 1px solid var(--border);
-      border-radius: 14px;
       background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 12px;
       font-weight: 700;
-      font-size: 13px;
     }
 
-    .architecture-step:not(:last-child)::after {
-      content: "→";
-      position: absolute;
-      right: -12px;
-      top: 50%;
-      transform: translateY(-50%);
+    .architecture-step span {
+      display: block;
       color: var(--accent);
-      z-index: 2;
+      margin-bottom: 7px;
+      font-size: 11px;
     }
 
-    .footer {
-      margin-top: 60px;
+    .list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .list-item {
+      padding: 13px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .list-title {
+      font-weight: 800;
+    }
+
+    .list-meta {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .verified {
+      color: var(--success);
+      font-weight: 800;
+    }
+
+    footer {
       padding: 24px 0 34px;
       border-top: 1px solid var(--border);
       color: var(--muted);
@@ -312,40 +330,26 @@
     }
 
     @media (max-width: 800px) {
-      .metrics {
-        grid-template-columns:
-          repeat(2, minmax(0, 1fr));
+      .demo-content {
+        flex-direction: column;
+        align-items: flex-start;
       }
 
-      .grid {
-        grid-template-columns: 1fr;
+      .demo-button {
+        width: 100%;
+      }
+
+      .metric-grid {
+        grid-template-columns: repeat(2, 1fr);
       }
 
       .architecture {
         grid-template-columns: 1fr;
       }
 
-      .architecture-step:not(:last-child)::after {
-        content: "↓";
-        right: auto;
-        left: 50%;
-        top: auto;
-        bottom: -17px;
-        transform: translateX(-50%);
-      }
-    }
-
-    @media (max-width: 480px) {
-      .metrics {
-        grid-template-columns: 1fr 1fr;
-      }
-
-      .metric {
-        padding: 15px;
-      }
-
-      .metric-value {
-        font-size: 24px;
+      .card,
+      .card.full {
+        grid-column: span 12;
       }
     }
   </style>
@@ -353,399 +357,314 @@
 
 <body>
 
-  <header>
-    <div class="container">
-      <div class="brand">
-        <div class="brand-mark">ON1</div>
+<header>
+  <div class="container">
+    <div class="brand">
+      <div class="logo">ON1</div>
 
-        <div>
-          <div class="brand-title">
-            ON1 Physical AI
-          </div>
-
-          <div class="brand-subtitle">
-            A DSATECHON1 initiative
-          </div>
+      <div>
+        <div class="brand-title">ON1 Physical AI</div>
+        <div class="brand-subtitle">
+          Machine Intelligence Infrastructure
         </div>
       </div>
     </div>
-  </header>
+  </div>
+</header>
 
-
-  <main class="container">
+<main>
+  <div class="container">
 
     <section class="hero">
 
-      <span class="eyebrow">
-        Software Prototype
-      </span>
+      <div class="eyebrow">
+        Software-First Physical AI Prototype
+      </div>
 
       <h1>
         Machine Intelligence Infrastructure
       </h1>
 
       <p>
-        Building trust for machine work through
-        identity, mission execution, evidence,
-        validation, memory, and reputation.
+        Building a software foundation for machine identity,
+        mission execution, verifiable work evidence, validation,
+        machine memory, and reputation.
       </p>
 
-      <div class="notice">
+      <div class="prototype-banner">
         <strong>Prototype status:</strong>
-        This demonstration currently uses a
-        software-simulated robot. It does not
-        represent physical hardware or live Konnex
-        network integration.
+        ON1 Physical AI currently uses a software-simulated machine.
+        The prototype does not yet control physical hardware and is
+        not connected to the live Konnex network.
       </div>
 
-    </section>
+      <!-- INTERACTIVE DEMO -->
+      <div class="demo-card">
 
-
-    <!-- NETWORK METRICS -->
-
-    <section class="metrics">
-
-      <div class="metric">
-        <div class="metric-label">
-          Registered Machines
-        </div>
-
-        <div
-          class="metric-value"
-          id="machineCount"
-        >
-          1
-        </div>
-      </div>
-
-
-      <div class="metric">
-        <div class="metric-label">
-          Missions
-        </div>
-
-        <div
-          class="metric-value"
-          id="missionCount"
-        >
-          1
-        </div>
-      </div>
-
-
-      <div class="metric">
-        <div class="metric-label">
-          Verified Work
-        </div>
-
-        <div
-          class="metric-value"
-          id="verifiedCount"
-        >
-          1
-        </div>
-      </div>
-
-
-      <div class="metric">
-        <div class="metric-label">
-          Network State
-        </div>
-
-        <div
-          class="metric-value"
-          id="networkState"
-        >
-          SIM
-        </div>
-      </div>
-
-    </section>
-
-
-    <!-- MACHINES -->
-
-    <section class="section">
-
-      <div class="section-heading">
-
-        <h2>
-          Machine Registry
-        </h2>
-
-        <p>
-          Registered virtual machines participating
-          in the prototype network.
-        </p>
-
-      </div>
-
-
-      <div class="card">
-
-        <div class="machine">
+        <div class="demo-content">
 
           <div>
-            <div class="machine-name">
+            <div class="demo-title">
+              Run the Interactive Mission Demo
+            </div>
+
+            <div class="demo-text">
+              Launch the browser-based simulator and watch a virtual
+              machine receive a navigation mission, generate telemetry,
+              produce evidence, pass validation, receive a PoPW-style
+              score, update its reputation, and record machine memory.
+            </div>
+          </div>
+
+          <a
+            class="demo-button"
+            href="simulator.html"
+          >
+            Launch Mission Simulator →
+          </a>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- NETWORK OVERVIEW -->
+
+    <section class="grid">
+
+      <div class="card full">
+        <h2>Prototype Network Overview</h2>
+
+        <div class="metric-grid">
+
+          <div class="metric">
+            <div class="metric-value">
+              1
+            </div>
+
+            <div class="metric-label">
+              REGISTERED MACHINE
+            </div>
+          </div>
+
+          <div class="metric">
+            <div class="metric-value">
+              1
+            </div>
+
+            <div class="metric-label">
+              MISSIONS EXECUTED
+            </div>
+          </div>
+
+          <div class="metric">
+            <div class="metric-value">
+              1
+            </div>
+
+            <div class="metric-label">
+              VERIFIED WORK
+            </div>
+          </div>
+
+          <div class="metric">
+            <div
+              class="metric-value"
+              style="color:var(--accent);"
+            >
+              SIM
+            </div>
+
+            <div class="metric-label">
+              NETWORK STATE
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- MACHINE REGISTRY -->
+
+      <div class="card">
+        <h2>Machine Registry</h2>
+
+        <div class="list">
+
+          <div class="list-item">
+
+            <div class="list-title">
               ON1 Virtual Navigator
             </div>
 
-            <div class="machine-id">
-              ON1-R001 · ON1-MACHINE-001
+            <div class="list-meta">
+              Robot ID: ON1-R001<br>
+              Machine Identity: ON1-MACHINE-001<br>
+              Status: IDLE
             </div>
+
           </div>
 
-          <span class="status">
-            IDLE
-          </span>
-
         </div>
-
       </div>
 
-    </section>
+      <!-- LATEST MISSION -->
 
+      <div class="card">
+        <h2>Latest Mission</h2>
 
-    <!-- MISSION + VALIDATION -->
+        <div class="list">
 
-    <section class="section">
+          <div class="list-item">
 
-      <div class="grid">
-
-        <div class="card">
-
-          <h3>
-            Latest Mission
-          </h3>
-
-          <div class="mission">
-
-            <div class="mission-top">
-
-              <span class="mission-id">
-                Navigation Mission
-              </span>
-
-              <span class="score">
-                100 PoPW
-              </span>
-
+            <div class="list-title">
+              Navigation Mission
             </div>
 
-            <div class="mission-meta">
-              ON1-R001 → Target (10, 10)
-            </div>
-
-            <div class="mission-meta">
-              Status: VERIFIED
+            <div class="list-meta">
+              Machine: ON1-R001<br>
+              Route: (0,0) → (10,10)<br>
+              Validation Score:
+              <span class="verified">
+                100/100
+              </span>
             </div>
 
           </div>
 
         </div>
+      </div>
 
+      <!-- VALIDATION -->
 
-        <div class="card">
+      <div class="card">
+        <h2>Validation</h2>
 
-          <h3>
+        <div class="list">
+
+          <div class="list-item">
+
+            <div class="list-title">
+              Evidence Verification
+            </div>
+
+            <div class="list-meta">
+              Local prototype validator<br>
+              Checks passed:
+              <span class="verified">
+                6/6
+              </span><br>
+              Result:
+              <span class="verified">
+                VERIFIED
+              </span>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+      <!-- REPUTATION -->
+
+      <div class="card">
+        <h2>Machine Reputation</h2>
+
+        <div class="list">
+
+          <div class="list-item">
+
+            <div class="list-title">
+              ON1-R001
+            </div>
+
+            <div class="list-meta">
+              Reputation Score:
+              <strong style="color:var(--success);">
+                55/100
+              </strong><br>
+              Successful Missions: 1<br>
+              Failed Missions: 0
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ARCHITECTURE -->
+
+      <div class="card full">
+        <h2>Prototype Architecture</h2>
+
+        <div class="architecture">
+
+          <div class="architecture-step">
+            <span>01</span>
+            Identity
+          </div>
+
+          <div class="architecture-step">
+            <span>02</span>
+            Mission
+          </div>
+
+          <div class="architecture-step">
+            <span>03</span>
+            Telemetry
+          </div>
+
+          <div class="architecture-step">
+            <span>04</span>
+            Evidence
+          </div>
+
+          <div class="architecture-step">
+            <span>05</span>
             Validation
-          </h3>
+          </div>
 
-          <div class="mission">
+        </div>
+      </div>
 
-            <div class="mission-top">
+      <!-- MEMORY -->
 
-              <span class="mission-id">
-                Evidence Verification
-              </span>
+      <div class="card full">
+        <h2>Machine Memory</h2>
 
-              <span class="score">
-                PASSED
-              </span>
+        <div class="list">
 
+          <div class="list-item">
+
+            <div class="list-title">
+              Navigation Mission
             </div>
 
-            <div class="mission-meta">
-              6 / 6 validation checks passed
-            </div>
-
-            <div class="mission-meta">
-              Local prototype validator
+            <div class="list-meta">
+              Robot: ON1-R001<br>
+              Result:
+              <span class="verified">
+                Verified
+              </span><br>
+              PoPW-style Score:
+              <span class="verified">
+                100/100
+              </span>
             </div>
 
           </div>
 
         </div>
-
       </div>
 
     </section>
 
+  </div>
+</main>
 
-    <!-- ARCHITECTURE -->
-
-    <section class="section">
-
-      <div class="section-heading">
-
-        <h2>
-          Machine Work Pipeline
-        </h2>
-
-        <p>
-          How ON1 Physical AI currently models
-          verifiable machine work.
-        </p>
-
-      </div>
-
-
-      <div class="architecture">
-
-        <div class="architecture-step">
-          Identity
-        </div>
-
-        <div class="architecture-step">
-          Mission
-        </div>
-
-        <div class="architecture-step">
-          Telemetry
-        </div>
-
-        <div class="architecture-step">
-          Evidence
-        </div>
-
-        <div class="architecture-step">
-          Validation
-        </div>
-
-      </div>
-
-    </section>
-
-
-    <!-- REPUTATION -->
-
-    <section class="section">
-
-      <div class="grid">
-
-        <div class="card">
-
-          <h3>
-            Machine Reputation
-          </h3>
-
-          <div class="mission">
-
-            <div class="mission-top">
-
-              <span class="mission-id">
-                ON1-R001
-              </span>
-
-              <span class="score">
-                55 / 100
-              </span>
-
-            </div>
-
-            <div class="mission-meta">
-              Successful missions: 1
-            </div>
-
-            <div class="mission-meta">
-              Failed missions: 0
-            </div>
-
-          </div>
-
-        </div>
-
-
-        <div class="card">
-
-          <h3>
-            Machine Memory
-          </h3>
-
-          <div class="mission">
-
-            <div class="mission-top">
-
-              <span class="mission-id">
-                Memory Entries
-              </span>
-
-              <span class="score">
-                1
-              </span>
-
-            </div>
-
-            <div class="mission-meta">
-              Latest task: Navigation
-            </div>
-
-            <div class="mission-meta">
-              Latest result: Verified
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </section>
-
-  </main>
-
-
-  <footer class="footer">
-
-    ON1 Physical AI — A DSATECHON1 initiative
-
-  </footer>
-
-
-  <script>
-    /*
-     * Current dashboard state.
-     *
-     * These values represent the latest successful
-     * simulator run. The next development stage will
-     * replace these static values with automatically
-     * supplied simulation data.
-     */
-
-    const simulationState = {
-      machines: 1,
-      missions: 1,
-      verifiedWork: 1,
-      networkState: "SIM",
-      reputation: 55
-    };
-
-    document.getElementById(
-      "machineCount"
-    ).textContent = simulationState.machines;
-
-    document.getElementById(
-      "missionCount"
-    ).textContent = simulationState.missions;
-
-    document.getElementById(
-      "verifiedCount"
-    ).textContent = simulationState.verifiedWork;
-
-    document.getElementById(
-      "networkState"
-    ).textContent = simulationState.networkState;
-  </script>
+<footer>
+  ON1 Physical AI — A DSATECHON1 initiative
+</footer>
 
 </body>
 </html>
