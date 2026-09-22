@@ -79,3 +79,26 @@ jobs:
           name: on1-physical-ai-simulation-evidence
           path: simulation_output/mission-result.json
           if-no-files-found: error
+
+
+  api-test:
+    name: Test ON1 Physical AI API
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check Python version
+        run: python --version
+
+      - name: Run API self-test
+        env:
+          ON1_API_TEST: "1"
+        run: python backend/api.py
