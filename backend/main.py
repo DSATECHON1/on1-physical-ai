@@ -4,24 +4,33 @@ Backend Mission Engine
 
 Prototype backend for:
 - Machine identity
-- Mission creation
 - Mission execution
-- Telemetry generation
+- Telemetry
 - Evidence generation
 - Local validation
 - PoPW-style scoring
 - Machine reputation
 - Machine memory
+- Evidence artifact export
+- Local evidence fingerprint
 
 This is a software prototype.
-It does not represent live Konnex or blockchain verification.
+
+It does NOT represent:
+- live Konnex verification
+- blockchain verification
+- an on-chain transaction
+- physical robot hardware
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 
@@ -30,13 +39,16 @@ from typing import Any
 # ============================================================
 
 PROJECT_NAME = "ON1 Physical AI"
-PROTOTYPE_VERSION = "0.4.0"
+PROTOTYPE_VERSION = "0.5.0"
 
 VALIDATOR_ID = "ON1-BACKEND-VALIDATOR-001"
 
 ROBOT_ID = "ON1-R001"
 ROBOT_IDENTITY = "ON1-MACHINE-001"
 ROBOT_MODEL = "ON1 Virtual Navigator"
+
+OUTPUT_DIRECTORY = Path("backend_output")
+OUTPUT_FILE = OUTPUT_DIRECTORY / "mission-result.json"
 
 
 # ============================================================
@@ -45,12 +57,19 @@ ROBOT_MODEL = "ON1 Virtual Navigator"
 
 def utc_now() -> str:
     """Return the current UTC timestamp in ISO 8601 format."""
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    return datetime.now(
+        timezone.utc
+    ).isoformat().replace("+00:00", "Z")
 
 
 def generate_id(prefix: str) -> str:
     """Generate a short prototype identifier."""
-    return f"{prefix}-{uuid.uuid4().hex[:12].upper()}"
+
+    return (
+        f"{prefix}-"
+        f"{uuid.uuid4().hex[:12].upper()}"
+    )
 
 
 def calculate_distance(
@@ -60,10 +79,33 @@ def calculate_distance(
     y2: float,
 ) -> float:
     """Calculate Euclidean distance between two coordinates."""
+
     return math.sqrt(
-        (x2 - x1) ** 2 +
-        (y2 - y1) ** 2
+        (x2 - x1) ** 2
+        + (y2 - y1) ** 2
     )
+
+
+def calculate_evidence_fingerprint(
+    evidence_package: dict[str, Any],
+) -> str:
+    """
+    Create a local SHA-256 fingerprint of the
+    exported backend evidence package.
+
+    This is NOT a blockchain hash and does NOT
+    represent Konnex verification.
+    """
+
+    canonical_json = json.dumps(
+        evidence_package,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+    return hashlib.sha256(
+        canonical_json
+    ).hexdigest()
 
 
 # ============================================================
@@ -71,6 +113,7 @@ def calculate_distance(
 # ============================================================
 
 class Robot:
+
     def __init__(
         self,
         robot_id: str = ROBOT_ID,
@@ -90,44 +133,73 @@ class Robot:
 
         self.reputation_score = 50
 
-        self.memory: list[dict[str, Any]] = []
+        self.memory: list[
+            dict[str, Any]
+        ] = []
 
-    def update_reputation(self, verified: bool) -> None:
-        """Update reputation after mission validation."""
+    def update_reputation(
+        self,
+        verified: bool,
+    ) -> None:
+        """Update reputation after validation."""
 
         if verified:
+
             self.successful_missions += 1
+
             self.reputation_score = min(
                 100,
                 self.reputation_score + 5,
             )
+
         else:
+
             self.failed_missions += 1
+
             self.reputation_score = max(
                 0,
                 self.reputation_score - 5,
             )
 
-    def remember(self, mission: dict[str, Any]) -> None:
+    def remember(
+        self,
+        mission: dict[str, Any],
+    ) -> None:
         """Store a compact mission memory record."""
 
         memory = {
             "memoryId": generate_id("MEM"),
-            "missionId": mission["missionId"],
-            "taskType": mission["taskType"],
+
+            "missionId": mission[
+                "missionId"
+            ],
+
+            "taskType": mission[
+                "taskType"
+            ],
+
             "result": (
                 "Verified"
-                if mission["validatorResult"]["verified"]
+                if mission[
+                    "validatorResult"
+                ]["verified"]
                 else "Failed"
             ),
-            "powpScore": mission["powpScore"],
+
+            "powpScore": mission[
+                "powpScore"
+            ],
+
             "recordedAt": utc_now(),
         }
 
-        self.memory.append(memory)
+        self.memory.append(
+            memory
+        )
 
-    def to_dict(self) -> dict[str, Any]:
-        """Return the robot as JSON-compatible data."""
+    def to_dict(
+        self,
+    ) -> dict[str, Any]:
 
         return {
             "robotId": self.robot_id,
@@ -135,9 +207,15 @@ class Robot:
             "model": self.model,
             "status": self.status,
             "missionCount": self.mission_count,
-            "successfulMissions": self.successful_missions,
-            "failedMissions": self.failed_missions,
-            "reputationScore": self.reputation_score,
+            "successfulMissions": (
+                self.successful_missions
+            ),
+            "failedMissions": (
+                self.failed_missions
+            ),
+            "reputationScore": (
+                self.reputation_score
+            ),
             "memory": self.memory,
         }
 
@@ -147,18 +225,17 @@ class Robot:
 # ============================================================
 
 class MissionEngine:
-    """
-    Executes a software-only navigation mission.
 
-    Current prototype:
-        Start:  (0, 0)
-        Target: (10, 10)
+    def __init__(
+        self,
+        robot: Robot,
+    ) -> None:
 
-    The robot moves one coordinate step at a time.
-    """
-
-    def __init__(self, robot: Robot) -> None:
         self.robot = robot
+
+    # ========================================================
+    # EXECUTE NAVIGATION
+    # ========================================================
 
     def execute_navigation(
         self,
@@ -166,14 +243,19 @@ class MissionEngine:
         target: tuple[int, int] = (10, 10),
     ) -> dict[str, Any]:
 
-        mission_id = generate_id("MSN")
+        mission_id = generate_id(
+            "MSN"
+        )
 
         started_at = utc_now()
 
         self.robot.status = "EXECUTING"
+
         self.robot.mission_count += 1
 
-        telemetry: list[dict[str, Any]] = []
+        telemetry: list[
+            dict[str, Any]
+        ] = []
 
         target_x, target_y = target
 
@@ -187,20 +269,40 @@ class MissionEngine:
 
         battery = 100
 
-        for step in range(1, steps + 1):
+        for step in range(
+            1,
+            steps + 1,
+        ):
 
             progress = step / steps
 
-            x = start[0] + (
-                target_x - start[0]
-            ) * progress
+            x = (
+                start[0]
+                + (
+                    target_x
+                    - start[0]
+                )
+                * progress
+            )
 
-            y = start[1] + (
-                target_y - start[1]
-            ) * progress
+            y = (
+                start[1]
+                + (
+                    target_y
+                    - start[1]
+                )
+                * progress
+            )
 
-            x = round(x, 4)
-            y = round(y, 4)
+            x = round(
+                x,
+                4,
+            )
+
+            y = round(
+                y,
+                4,
+            )
 
             distance = calculate_distance(
                 x,
@@ -217,11 +319,19 @@ class MissionEngine:
             telemetry.append(
                 {
                     "timestamp": utc_now(),
+
                     "step": step,
+
                     "x": x,
+
                     "y": y,
-                    "distanceFromTarget": distance,
+
+                    "distanceFromTarget": (
+                        distance
+                    ),
+
                     "battery": battery,
+
                     "speed": 1,
                 }
             )
@@ -231,13 +341,21 @@ class MissionEngine:
         final_position = telemetry[-1]
 
         target_reached = (
-            final_position["x"] == target_x
-            and final_position["y"] == target_y
+            final_position["x"]
+            == target_x
+            and
+            final_position["y"]
+            == target_y
         )
 
         mission = {
+
             "missionId": mission_id,
-            "robotId": self.robot.robot_id,
+
+            "robotId": (
+                self.robot.robot_id
+            ),
+
             "taskType": "Navigation",
 
             "start": {
@@ -251,6 +369,7 @@ class MissionEngine:
             },
 
             "startedAt": started_at,
+
             "completedAt": completed_at,
 
             "telemetry": telemetry,
@@ -262,19 +381,29 @@ class MissionEngine:
             ),
         }
 
-        mission["evidence"] = self.generate_evidence(
+        mission[
+            "evidence"
+        ] = self.generate_evidence(
             mission
         )
 
-        mission["validatorResult"] = self.validate_mission(
+        mission[
+            "validatorResult"
+        ] = self.validate_mission(
             mission
         )
 
-        mission["powpScore"] = self.calculate_powp_score(
-            mission["validatorResult"]
+        mission[
+            "powpScore"
+        ] = self.calculate_powp_score(
+            mission[
+                "validatorResult"
+            ]
         )
 
-        verified = mission["validatorResult"]["verified"]
+        verified = mission[
+            "validatorResult"
+        ]["verified"]
 
         self.robot.status = "IDLE"
 
@@ -298,27 +427,52 @@ class MissionEngine:
     ) -> dict[str, Any]:
 
         return {
-            "evidenceId": generate_id("EVD"),
 
-            "missionId": mission["missionId"],
-
-            "robotId": mission["robotId"],
-
-            "taskType": mission["taskType"],
-
-            "startPosition": mission["start"],
-
-            "targetPosition": mission["target"],
-
-            "telemetryPoints": len(
-                mission["telemetry"]
+            "evidenceId": generate_id(
+                "EVD"
             ),
 
-            "missionStartedAt": mission["startedAt"],
+            "missionId": mission[
+                "missionId"
+            ],
 
-            "missionCompletedAt": mission["completedAt"],
+            "robotId": mission[
+                "robotId"
+            ],
 
-            "status": mission["status"],
+            "taskType": mission[
+                "taskType"
+            ],
+
+            "startPosition": mission[
+                "start"
+            ],
+
+            "targetPosition": mission[
+                "target"
+            ],
+
+            "telemetryPoints": len(
+                mission[
+                    "telemetry"
+                ]
+            ),
+
+            "missionStartedAt": (
+                mission[
+                    "startedAt"
+                ]
+            ),
+
+            "missionCompletedAt": (
+                mission[
+                    "completedAt"
+                ]
+            ),
+
+            "status": mission[
+                "status"
+            ],
 
             "generatedAt": utc_now(),
         }
@@ -334,50 +488,77 @@ class MissionEngine:
 
         telemetry_present = (
             isinstance(
-                mission.get("telemetry"),
+                mission.get(
+                    "telemetry"
+                ),
                 list,
             )
             and len(
-                mission["telemetry"]
+                mission[
+                    "telemetry"
+                ]
             ) > 0
         )
 
-        target = mission["target"]
+        target = mission[
+            "target"
+        ]
 
         final_point = (
-            mission["telemetry"][-1]
+            mission[
+                "telemetry"
+            ][-1]
             if telemetry_present
             else None
         )
 
         target_reached = (
             final_point is not None
-            and final_point["x"] == target["x"]
-            and final_point["y"] == target["y"]
+            and final_point["x"]
+            == target["x"]
+            and final_point["y"]
+            == target["y"]
         )
 
         checks = {
+
             "missionStarted": bool(
-                mission.get("startedAt")
+                mission.get(
+                    "startedAt"
+                )
             ),
 
             "missionCompleted": (
-                mission.get("status")
+                mission.get(
+                    "status"
+                )
                 == "COMPLETED"
             ),
 
-            "telemetryPresent": telemetry_present,
+            "telemetryPresent": (
+                telemetry_present
+            ),
 
-            "targetReached": target_reached,
+            "targetReached": (
+                target_reached
+            ),
 
-            "robotIdentityPresent": bool(
-                mission.get("robotId")
+            "robotIdentityPresent": (
+                mission.get(
+                    "robotId"
+                )
                 == self.robot.robot_id
             ),
 
             "evidenceGenerated": bool(
-                mission.get("evidence")
-                and mission["evidence"].get("evidenceId")
+                mission.get(
+                    "evidence"
+                )
+                and mission[
+                    "evidence"
+                ].get(
+                    "evidenceId"
+                )
             ),
         }
 
@@ -387,23 +568,33 @@ class MissionEngine:
             if result
         )
 
-        total_checks = len(checks)
+        total_checks = len(
+            checks
+        )
 
         verified = (
-            passed_checks == total_checks
+            passed_checks
+            == total_checks
             and total_checks > 0
         )
 
         return {
-            "validatorId": VALIDATOR_ID,
+
+            "validatorId": (
+                VALIDATOR_ID
+            ),
 
             "validatedAt": utc_now(),
 
             "checks": checks,
 
-            "passedChecks": passed_checks,
+            "passedChecks": (
+                passed_checks
+            ),
 
-            "totalChecks": total_checks,
+            "totalChecks": (
+                total_checks
+            ),
 
             "verified": verified,
         }
@@ -417,14 +608,23 @@ class MissionEngine:
         validator_result: dict[str, Any],
     ) -> int:
 
-        total = validator_result["totalChecks"]
-        passed = validator_result["passedChecks"]
+        total = validator_result[
+            "totalChecks"
+        ]
+
+        passed = validator_result[
+            "passedChecks"
+        ]
 
         if total == 0:
             return 0
 
         return round(
-            (passed / total) * 100
+            (
+                passed
+                / total
+            )
+            * 100
         )
 
 
@@ -440,18 +640,20 @@ engine = MissionEngine(
 
 
 # ============================================================
-# PUBLIC PROTOTYPE FUNCTIONS
+# REGISTRATION
 # ============================================================
 
 def register_robot() -> dict[str, Any]:
-    """
-    Register the prototype robot.
-    """
 
     return {
-        "project": PROJECT_NAME,
 
-        "prototypeVersion": PROTOTYPE_VERSION,
+        "project": (
+            PROJECT_NAME
+        ),
+
+        "prototypeVersion": (
+            PROTOTYPE_VERSION
+        ),
 
         "registered": True,
 
@@ -461,23 +663,34 @@ def register_robot() -> dict[str, Any]:
     }
 
 
+# ============================================================
+# RUN MISSION
+# ============================================================
+
 def run_mission() -> dict[str, Any]:
-    """
-    Execute one navigation mission and
-    return the complete evidence package.
-    """
 
-    mission = engine.execute_navigation()
+    mission = (
+        engine.execute_navigation()
+    )
 
-    return {
-        "project": PROJECT_NAME,
+    result = {
 
-        "prototypeVersion": PROTOTYPE_VERSION,
+        "project": (
+            PROJECT_NAME
+        ),
+
+        "prototypeVersion": (
+            PROTOTYPE_VERSION
+        ),
 
         "simulation": {
+
             "type": "backend",
+
             "hardwareConnected": False,
+
             "konnexIntegrated": False,
+
             "onChainVerified": False,
         },
 
@@ -488,48 +701,149 @@ def run_mission() -> dict[str, Any]:
         "mission": mission,
     }
 
+    return result
+
 
 # ============================================================
-# DEMO
+# EXPORT EVIDENCE
 # ============================================================
 
-def print_demo(result: dict[str, Any]) -> None:
-    """Print a readable prototype result."""
+def export_evidence(
+    result: dict[str, Any],
+) -> tuple[Path, str]:
 
-    mission = result["mission"]
-    validator = mission["validatorResult"]
+    OUTPUT_DIRECTORY.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    fingerprint = (
+        calculate_evidence_fingerprint(
+            result
+        )
+    )
+
+    result[
+        "evidenceFingerprint"
+    ] = {
+
+        "algorithm": "SHA-256",
+
+        "value": fingerprint,
+
+        "scope": (
+            "local backend "
+            "evidence package"
+        ),
+
+        "konnexVerified": False,
+
+        "onChainVerified": False,
+    }
+
+    with OUTPUT_FILE.open(
+        "w",
+        encoding="utf-8",
+    ) as file:
+
+        json.dump(
+            result,
+            file,
+            indent=2,
+        )
+
+        file.write("\n")
+
+    return (
+        OUTPUT_FILE,
+        fingerprint,
+    )
+
+
+# ============================================================
+# DEMO OUTPUT
+# ============================================================
+
+def print_demo(
+    result: dict[str, Any],
+    output_path: Path,
+    fingerprint: str,
+) -> None:
+
+    mission = result[
+        "mission"
+    ]
+
+    validator = mission[
+        "validatorResult"
+    ]
 
     print()
-    print("=" * 60)
-    print("ON1 PHYSICAL AI — BACKEND MISSION ENGINE")
-    print("=" * 60)
+
+    print(
+        "=" * 60
+    )
+
+    print(
+        "ON1 PHYSICAL AI — "
+        "BACKEND MISSION ENGINE"
+    )
+
+    print(
+        "=" * 60
+    )
 
     print()
+
     print("PROJECT")
-    print(PROJECT_NAME)
+
+    print(
+        PROJECT_NAME
+    )
 
     print()
-    print("PROTOTYPE VERSION")
-    print(PROTOTYPE_VERSION)
+
+    print(
+        "PROTOTYPE VERSION"
+    )
+
+    print(
+        PROTOTYPE_VERSION
+    )
 
     print()
+
     print("ROBOT")
-    print(f"  Robot ID: {result['robot']['robotId']}")
+
     print(
-        f"  Identity: {result['robot']['identity']}"
+        f"  Robot ID: "
+        f"{result['robot']['robotId']}"
     )
+
     print(
-        f"  Model: {result['robot']['model']}"
+        f"  Identity: "
+        f"{result['robot']['identity']}"
+    )
+
+    print(
+        f"  Model: "
+        f"{result['robot']['model']}"
     )
 
     print()
+
     print("MISSION")
+
     print(
-        f"  Mission ID: {mission['missionId']}"
+        f"  Mission ID: "
+        f"{mission['missionId']}"
     )
+
     print(
-        f"  Task: {mission['taskType']}"
+        f"  Task: "
+        f"{mission['taskType']}"
     )
+
     print(
         f"  Route: "
         f"({mission['start']['x']}, "
@@ -540,19 +854,25 @@ def print_demo(result: dict[str, Any]) -> None:
     )
 
     print()
+
     print("TELEMETRY")
+
     print(
-        f"  Points: {len(mission['telemetry'])}"
+        f"  Points: "
+        f"{len(mission['telemetry'])}"
     )
 
     print()
+
     print("EVIDENCE")
+
     print(
         f"  Evidence ID: "
         f"{mission['evidence']['evidenceId']}"
     )
 
     print()
+
     print("VALIDATION")
 
     print(
@@ -567,37 +887,81 @@ def print_demo(result: dict[str, Any]) -> None:
     )
 
     print()
-    print("PoPW-STYLE SCORE")
+
+    print(
+        "PoPW-STYLE SCORE"
+    )
+
     print(
         f"  {mission['powpScore']}/100"
     )
 
     print()
+
     print("REPUTATION")
+
     print(
         f"  Score: "
         f"{result['robot']['reputationScore']}/100"
     )
 
     print()
+
     print("MEMORY")
+
     print(
         f"  Records: "
         f"{len(result['robot']['memory'])}"
     )
 
     print()
+
+    print("EVIDENCE ARTIFACT")
+
+    print(
+        f"  {output_path}"
+    )
+
+    print()
+
+    print(
+        "LOCAL SHA-256 FINGERPRINT"
+    )
+
+    print(
+        f"  {fingerprint}"
+    )
+
+    print()
+
     print("KONNEX")
-    print("  Integrated: False")
+
+    print(
+        "  Integrated: False"
+    )
 
     print()
+
     print("ON-CHAIN")
-    print("  Verified: False")
+
+    print(
+        "  Verified: False"
+    )
 
     print()
-    print("=" * 60)
-    print("MISSION COMPLETE")
-    print("=" * 60)
+
+    print(
+        "=" * 60
+    )
+
+    print(
+        "MISSION COMPLETE"
+    )
+
+    print(
+        "=" * 60
+    )
+
     print()
 
 
@@ -607,15 +971,31 @@ def print_demo(result: dict[str, Any]) -> None:
 
 if __name__ == "__main__":
 
-    registration = register_robot()
+    registration = (
+        register_robot()
+    )
 
     print(
         "Robot registered:",
-        registration["robot"]["robotId"],
+        registration[
+            "robot"
+        ][
+            "robotId"
+        ],
     )
 
-    result = run_mission()
+    result = (
+        run_mission()
+    )
+
+    output_path, fingerprint = (
+        export_evidence(
+            result
+        )
+    )
 
     print_demo(
-        result
+        result,
+        output_path,
+        fingerprint,
     )
