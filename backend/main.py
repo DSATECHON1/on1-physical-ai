@@ -13,6 +13,7 @@ Prototype backend for:
 - Machine memory
 - Evidence artifact export
 - Local evidence fingerprint
+- Firebase / Firestore persistence
 
 This is a software prototype.
 
@@ -33,6 +34,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import firestore
+
 
 # ============================================================
 # CONFIGURATION
@@ -47,8 +52,64 @@ ROBOT_ID = "ON1-R001"
 ROBOT_IDENTITY = "ON1-MACHINE-001"
 ROBOT_MODEL = "ON1 Virtual Navigator"
 
+# Firestore device document
+FIRESTORE_DEVICE_COLLECTION = "devices"
+FIRESTORE_DEVICE_ID = "on1-unit-01"
+
+# Firestore machine memory subcollection
+FIRESTORE_MEMORY_COLLECTION = "memory"
+
+# Render Secret File
+FIREBASE_CREDENTIALS_PATH = (
+    "/etc/secrets/"
+    "on1-physical-ai-firebase-adminsdk-fbsvc-6aad4f0b06.json"
+)
+
 OUTPUT_DIRECTORY = Path("backend_output")
 OUTPUT_FILE = OUTPUT_DIRECTORY / "mission-result.json"
+
+
+# ============================================================
+# FIREBASE / FIRESTORE
+# ============================================================
+
+def initialize_firestore():
+    """
+    Initialize Firebase Admin SDK using the Render Secret File.
+
+    The credential JSON is never stored in source code.
+    """
+
+    if not firebase_admin._apps:
+
+        if not Path(
+            FIREBASE_CREDENTIALS_PATH
+        ).exists():
+
+            raise FileNotFoundError(
+                "Firebase credential file was not found at "
+                f"{FIREBASE_CREDENTIALS_PATH}"
+            )
+
+        credential = credentials.Certificate(
+            FIREBASE_CREDENTIALS_PATH
+        )
+
+        firebase_admin.initialize_app(
+            credential
+        )
+
+    return firestore.client()
+
+
+db = initialize_firestore()
+
+
+device_ref = db.collection(
+    FIRESTORE_DEVICE_COLLECTION
+).document(
+    FIRESTORE_DEVICE_ID
+)
 
 
 # ============================================================
@@ -109,6 +170,143 @@ def calculate_evidence_fingerprint(
 
 
 # ============================================================
+# FIRESTORE DEVICE STATE
+# ============================================================
+
+def load_device_state() -> dict[str, Any]:
+    """
+    Load the existing device state from Firestore.
+
+    Existing Firestore values are treated as the
+    persistent source of truth.
+
+    In particular, an existing reputation value is
+    never replaced by the Python prototype default.
+    """
+
+    snapshot = device_ref.get()
+
+    if not snapshot.exists:
+
+        initial_state = {
+            "name": (
+                "ON1 Physical AI Unit 01"
+            ),
+
+            "connection_status": "online",
+
+            "operational_status": "idle",
+
+            "mission_count": 0,
+
+            "successful_missions": 0,
+
+            "failed_missions": 0,
+
+            "reputation": 50,
+        }
+
+        device_ref.set(
+            initial_state
+        )
+
+        return initial_state
+
+    return snapshot.to_dict() or {}
+
+
+def save_device_state(
+    robot: "Robot",
+) -> None:
+    """
+    Persist machine state to Firestore.
+
+    Existing device fields not managed by this backend
+    are preserved.
+    """
+
+    device_ref.set(
+        {
+            "connection_status": "online",
+
+            "operational_status": (
+                robot.status.lower()
+            ),
+
+            "mission_count": (
+                robot.mission_count
+            ),
+
+            "successful_missions": (
+                robot.successful_missions
+            ),
+
+            "failed_missions": (
+                robot.failed_missions
+            ),
+
+            "reputation": (
+                robot.reputation_score
+            ),
+        },
+        merge=True,
+    )
+
+
+def load_memory() -> list[
+    dict[str, Any]
+]:
+    """
+    Load persistent machine memory from Firestore.
+    """
+
+    memory_ref = device_ref.collection(
+        FIRESTORE_MEMORY_COLLECTION
+    )
+
+    snapshots = (
+        memory_ref
+        .order_by(
+            "recordedAt"
+        )
+        .stream()
+    )
+
+    memory = []
+
+    for snapshot in snapshots:
+
+        record = snapshot.to_dict()
+
+        if record:
+            memory.append(
+                record
+            )
+
+    return memory
+
+
+def save_memory(
+    memory: dict[str, Any],
+) -> None:
+    """
+    Persist a machine memory record.
+    """
+
+    memory_id = memory[
+        "memoryId"
+    ]
+
+    device_ref.collection(
+        FIRESTORE_MEMORY_COLLECTION
+    ).document(
+        memory_id
+    ).set(
+        memory
+    )
+
+
+# ============================================================
 # ROBOT
 # ============================================================
 
@@ -127,15 +325,46 @@ class Robot:
 
         self.status = "IDLE"
 
-        self.mission_count = 0
-        self.successful_missions = 0
-        self.failed_missions = 0
+        device_state = load_device_state()
 
-        self.reputation_score = 50
+        self.mission_count = int(
+            device_state.get(
+                "mission_count",
+                0,
+            )
+        )
 
-        self.memory: list[
-            dict[str, Any]
-        ] = []
+        self.successful_missions = int(
+            device_state.get(
+                "successful_missions",
+                0,
+            )
+        )
+
+        self.failed_missions = int(
+            device_state.get(
+                "failed_missions",
+                0,
+            )
+        )
+
+        # IMPORTANT:
+        # Existing Firestore reputation is used.
+        #
+        # Therefore:
+        # devices/on1-unit-01/reputation = 100
+        #
+        # remains 100 and is NOT replaced by
+        # the old Python prototype default of 50.
+
+        self.reputation_score = int(
+            device_state.get(
+                "reputation",
+                50,
+            )
+        )
+
+        self.memory = load_memory()
 
     def update_reputation(
         self,
@@ -161,14 +390,20 @@ class Robot:
                 self.reputation_score - 5,
             )
 
+        save_device_state(
+            self
+        )
+
     def remember(
         self,
         mission: dict[str, Any],
     ) -> None:
-        """Store a compact mission memory record."""
+        """Store a compact persistent mission memory record."""
 
         memory = {
-            "memoryId": generate_id("MEM"),
+            "memoryId": generate_id(
+                "MEM"
+            ),
 
             "missionId": mission[
                 "missionId"
@@ -197,25 +432,39 @@ class Robot:
             memory
         )
 
+        save_memory(
+            memory
+        )
+
     def to_dict(
         self,
     ) -> dict[str, Any]:
 
         return {
             "robotId": self.robot_id,
+
             "identity": self.identity,
+
             "model": self.model,
+
             "status": self.status,
-            "missionCount": self.mission_count,
+
+            "missionCount": (
+                self.mission_count
+            ),
+
             "successfulMissions": (
                 self.successful_missions
             ),
+
             "failedMissions": (
                 self.failed_missions
             ),
+
             "reputationScore": (
                 self.reputation_score
             ),
+
             "memory": self.memory,
         }
 
@@ -252,6 +501,10 @@ class MissionEngine:
         self.robot.status = "EXECUTING"
 
         self.robot.mission_count += 1
+
+        save_device_state(
+            self.robot
+        )
 
         telemetry: list[
             dict[str, Any]
