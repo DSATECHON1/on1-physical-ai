@@ -1,1267 +1,1698 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>ON1 Physical AI — Mission Simulator</title>
-
-  <meta
-    name="description"
-    content="ON1 Physical AI browser-based mission simulator for machine identity, mission execution, telemetry, evidence, validation, memory, and reputation."
-  >
-
-  <style>
-    :root {
-      --bg: #071018;
-      --panel: #0d1721;
-      --panel-2: #101e2a;
-      --border: #1d3445;
-      --text: #edf6fb;
-      --muted: #8da5b5;
-      --accent: #39d9ff;
-      --success: #46e6a5;
-      --warning: #ffd166;
-      --danger: #ff6b7a;
-      --shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background:
-        radial-gradient(circle at top right, rgba(57, 217, 255, 0.08), transparent 30%),
-        linear-gradient(180deg, #071018 0%, #08121a 100%);
-      color: var(--text);
-      font-family: Arial, Helvetica, sans-serif;
-    }
-
-    .container {
-      width: min(1180px, calc(100% - 28px));
-      margin: 0 auto;
-    }
-
-    header {
-      padding: 22px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .logo {
-      width: 42px;
-      height: 42px;
-      border: 1px solid var(--accent);
-      border-radius: 12px;
-      display: grid;
-      place-items: center;
-      font-weight: 800;
-      color: var(--accent);
-      background: rgba(57, 217, 255, 0.06);
-    }
-
-    .brand-title {
-      font-weight: 800;
-      font-size: 17px;
-    }
-
-    .brand-subtitle {
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 3px;
-    }
-
-    main {
-      padding: 32px 0 50px;
-    }
-
-    .hero {
-      margin-bottom: 24px;
-    }
-
-    .eyebrow {
-      color: var(--accent);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      margin-bottom: 10px;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(30px, 6vw, 48px);
-      line-height: 1.05;
-    }
-
-    .hero p {
-      max-width: 760px;
-      color: var(--muted);
-      line-height: 1.65;
-      margin: 14px 0 0;
-    }
-
-    .notice {
-      margin-top: 20px;
-      padding: 14px 16px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.025);
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.6;
-    }
-
-    .notice strong {
-      color: var(--warning);
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      gap: 16px;
-    }
-
-    .card {
-      grid-column: span 6;
-      background: linear-gradient(180deg, var(--panel), #0a151e);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: var(--shadow);
-    }
-
-    .card.full {
-      grid-column: span 12;
-    }
-
-    .card h2 {
-      margin: 0 0 16px;
-      font-size: 17px;
-    }
-
-    .section-label {
-      color: var(--muted);
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 6px;
-    }
-
-    .machine-id {
-      font-size: 21px;
-      font-weight: 800;
-    }
-
-    .status {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      margin-top: 9px;
-      padding: 7px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .status-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--muted);
-    }
-
-    .status.running {
-      color: var(--accent);
-    }
-
-    .status.running .status-dot {
-      background: var(--accent);
-    }
-
-    .status.success {
-      color: var(--success);
-    }
-
-    .status.success .status-dot {
-      background: var(--success);
-    }
-
-    .mission-map {
-      position: relative;
-      height: 270px;
-      margin-top: 16px;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      overflow: hidden;
-      background:
-        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
-        #08141d;
-      background-size: 27px 27px;
-    }
-
-    .map-label {
-      position: absolute;
-      font-size: 11px;
-      color: var(--muted);
-    }
-
-    .start-label {
-      left: 14px;
-      bottom: 12px;
-    }
-
-    .target-label {
-      right: 14px;
-      top: 12px;
-    }
-
-    .target {
-      position: absolute;
-      width: 16px;
-      height: 16px;
-      right: 11%;
-      top: 12%;
-      border: 2px solid var(--warning);
-      border-radius: 50%;
-      box-shadow: 0 0 20px rgba(255, 209, 102, .4);
-    }
-
-    .robot {
-      position: absolute;
-      width: 22px;
-      height: 22px;
-      left: 9%;
-      bottom: 9%;
-      border-radius: 7px;
-      background: var(--accent);
-      box-shadow: 0 0 22px rgba(57, 217, 255, .65);
-      transform: translate(-50%, 50%);
-      transition:
-        left .45s linear,
-        bottom .45s linear;
-    }
-
-    .robot::after {
-      content: "";
-      position: absolute;
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: #071018;
-      left: 7px;
-      top: 7px;
-    }
-
-    .telemetry {
-      margin-top: 16px;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-    }
-
-    .metric {
-      padding: 12px;
-      background: var(--panel-2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-    }
-
-    .metric-value {
-      font-size: 18px;
-      font-weight: 800;
-    }
-
-    .metric-label {
-      margin-top: 4px;
-      color: var(--muted);
-      font-size: 11px;
-    }
-
-    .button-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 18px;
-    }
-
-    button {
-      border: 0;
-      border-radius: 10px;
-      padding: 12px 18px;
-      font-size: 14px;
-      font-weight: 800;
-      cursor: pointer;
-      color: #061018;
-      background: var(--accent);
-    }
-
-    button:hover {
-      filter: brightness(1.08);
-    }
-
-    button:disabled {
-      cursor: not-allowed;
-      opacity: .45;
-      filter: none;
-    }
-
-    button.secondary {
-      color: var(--text);
-      background: #172733;
-      border: 1px solid var(--border);
-    }
-
-    button.export {
-      color: #061018;
-      background: var(--success);
-    }
-
-    .checks {
-      display: grid;
-      gap: 9px;
-    }
-
-    .check {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 11px 12px;
-      background: var(--panel-2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      font-size: 13px;
-    }
-
-    .check-name {
-      color: var(--muted);
-    }
-
-    .pass {
-      color: var(--success);
-      font-weight: 800;
-    }
-
-    .pending {
-      color: var(--warning);
-      font-weight: 800;
-    }
-
-    .score {
-      font-size: 46px;
-      font-weight: 900;
-      color: var(--success);
-      margin: 4px 0;
-    }
-
-    .score-label {
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .progress {
-      height: 9px;
-      border-radius: 99px;
-      overflow: hidden;
-      margin-top: 14px;
-      background: #172733;
-    }
-
-    .progress-bar {
-      width: 0%;
-      height: 100%;
-      background: var(--success);
-      transition: width .4s ease;
-    }
-
-    .evidence {
-      min-height: 170px;
-      padding: 14px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: #071119;
-      overflow: auto;
-    }
-
-    .export-area {
-      margin-top: 16px;
-      padding: 14px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.02);
-    }
-
-    .export-description {
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.55;
-      margin-bottom: 12px;
-    }
-
-    pre {
-      margin: 0;
-      color: #c5d8e3;
-      font-family: Consolas, Monaco, monospace;
-      font-size: 12px;
-      line-height: 1.55;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-
-    .memory-entry {
-      padding: 13px;
-      border: 1px solid var(--border);
-      background: var(--panel-2);
-      border-radius: 10px;
-    }
-
-    .memory-title {
-      font-weight: 800;
-    }
-
-    .memory-meta {
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 5px;
-    }
-
-    footer {
-      padding: 24px 0 34px;
-      border-top: 1px solid var(--border);
-      color: var(--muted);
-      font-size: 12px;
-      text-align: center;
-    }
-
-    @media (max-width: 760px) {
-      .card,
-      .card.full {
-        grid-column: span 12;
-      }
-
-      .telemetry {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .mission-map {
-        height: 230px;
-      }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>ON1 Physical AI — Mission Simulator</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #07111f;
+  color: #e8eef7;
+}
+
+.container {
+  width: min(1100px, 94%);
+  margin: auto;
+  padding: 24px 0 40px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.logo {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+  border-radius: 14px;
+  margin-bottom: 10px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 30px;
+}
+
+.subtitle {
+  margin-top: 8px;
+  color: #8ea2bb;
+  font-size: 14px;
+}
+
+.notice {
+  margin: 20px 0;
+  padding: 14px 16px;
+  border: 1px solid #20344d;
+  border-radius: 12px;
+  background: #0b1829;
+  color: #9db0c8;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: #0b1829;
+  border: 1px solid #1d3047;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.16);
+}
+
+.card.full {
+  grid-column: 1 / -1;
+}
+
+.card h2 {
+  margin: 0 0 15px;
+  font-size: 17px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 9px 0;
+  border-bottom: 1px solid #16283d;
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.label {
+  color: #8398b2;
+}
+
+.value {
+  text-align: right;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.status {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: #17283b;
+  color: #b8c8da;
+}
+
+.status.running {
+  color: #ffd37a;
+  background: #342a12;
+}
+
+.status.success {
+  color: #8ff0b2;
+  background: #102d20;
+}
+
+.status.failed {
+  color: #ff9a9a;
+  background: #321616;
+}
+
+.map {
+  position: relative;
+  height: 300px;
+  border-radius: 14px;
+  overflow: hidden;
+  background-color: #071321;
+  border: 1px solid #1b3047;
+  background-image:
+    linear-gradient(rgba(82,113,145,.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(82,113,145,.12) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+.map-point {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.start-point {
+  left: 12%;
+  top: 82%;
+  background: #71a7ff;
+  box-shadow: 0 0 14px rgba(113,167,255,.7);
+}
+
+.target-point {
+  left: 88%;
+  top: 18%;
+  background: #8ff0b2;
+  box-shadow: 0 0 14px rgba(143,240,178,.7);
+}
+
+.robot-point {
+  position: absolute;
+  left: 12%;
+  top: 82%;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: #ffffff;
+  border: 3px solid #6aa8ff;
+  box-shadow: 0 0 16px rgba(106,168,255,.9);
+  transition: left .25s linear, top .25s linear;
+  z-index: 3;
+}
+
+.map-label {
+  position: absolute;
+  font-size: 11px;
+  color: #9fb2c8;
+}
+
+.start-label {
+  left: 7%;
+  top: 86%;
+}
+
+.target-label {
+  right: 5%;
+  top: 11%;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 12px 17px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #07111f;
+  background: #8ff0b2;
+}
+
+button:hover {
+  opacity: .9;
+}
+
+button.secondary {
+  color: #d8e4f2;
+  background: #17283b;
+}
+
+button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.progress-wrap {
+  margin-top: 15px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 9px;
+  background: #14263a;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress {
+  width: 0%;
+  height: 100%;
+  background: #8ff0b2;
+  transition: width .25s linear;
+}
+
+.telemetry {
+  max-height: 220px;
+  overflow-y: auto;
+  background: #071321;
+  border-radius: 10px;
+  border: 1px solid #172b42;
+  padding: 10px;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.telemetry-row {
+  padding: 7px 4px;
+  border-bottom: 1px solid #14263a;
+}
+
+.telemetry-row:last-child {
+  border-bottom: 0;
+}
+
+.check {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid #16283d;
+}
+
+.check:last-child {
+  border-bottom: 0;
+}
+
+.pass {
+  color: #8ff0b2;
+  font-weight: 700;
+}
+
+.pending {
+  color: #ffd37a;
+}
+
+.fail {
+  color: #ff8d8d;
+  font-weight: 700;
+}
+
+.score {
+  font-size: 38px;
+  font-weight: 800;
+  margin: 5px 0;
+}
+
+.score-label {
+  color: #8ea2bb;
+  font-size: 12px;
+}
+
+pre {
+  margin: 0;
+  padding: 14px;
+  background: #06101d;
+  border: 1px solid #172b42;
+  border-radius: 10px;
+  overflow-x: auto;
+  color: #b9c9da;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.empty {
+  color: #71859d;
+  font-size: 13px;
+}
+
+.backend-status {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #071321;
+  border: 1px solid #172b42;
+  color: #8ea2bb;
+  font-size: 12px;
+}
+
+.backend-status.online {
+  color: #8ff0b2;
+}
+
+.backend-status.error {
+  color: #ff9a9a;
+}
+
+footer {
+  text-align: center;
+  margin-top: 30px;
+  color: #647990;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card.full {
+    grid-column: auto;
+  }
+
+  h1 {
+    font-size: 25px;
+  }
+
+  .map {
+    height: 260px;
+  }
+}
+</style>
 </head>
 
 <body>
 
-<header>
-  <div class="container">
-    <div class="brand">
-      <div class="logo">ON1</div>
+<div class="container">
 
-      <div>
-        <div class="brand-title">ON1 Physical AI</div>
-        <div class="brand-subtitle">Machine Intelligence Infrastructure</div>
-      </div>
-    </div>
+<header>
+  <img
+    src="dsatechon1-logo.jpg"
+    alt="DSATECHON1"
+    class="logo"
+    onerror="this.style.display='none'"
+  >
+
+  <h1>ON1 Physical AI</h1>
+
+  <div class="subtitle">
+    Machine Intelligence Infrastructure / Physical AI Mission Simulator
   </div>
 </header>
 
-<main>
-  <div class="container">
+<div class="notice">
+  This browser interface triggers the ON1 software simulation backend.
+  It does not control physical hardware and does not represent a live
+  Konnex or on-chain transaction. Mission results displayed after execution
+  are returned by the ON1 Physical AI backend.
+</div>
 
-    <section class="hero">
-      <div class="eyebrow">Interactive Prototype</div>
+<div class="grid">
 
-      <h1>Physical AI Mission Simulator</h1>
+  <!-- MACHINE IDENTITY -->
+  <section class="card">
+    <h2>Machine Identity</h2>
 
-      <p>
-        Simulate a machine receiving a mission, executing a task,
-        producing telemetry and evidence, passing validation,
-        updating reputation, and recording machine memory.
-      </p>
+    <div class="row">
+      <span class="label">Robot ID</span>
+      <span class="value" id="robotId">Loading...</span>
+    </div>
 
-      <div class="notice">
-        <strong>Prototype notice:</strong>
-        This is a browser-based software simulation. It does not control
-        physical hardware and does not represent a live Konnex network
-        transaction or on-chain verification.
+    <div class="row">
+      <span class="label">Machine Identity</span>
+      <span class="value" id="identity">Loading...</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Model</span>
+      <span class="value" id="model">Loading...</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Status</span>
+      <span class="value">
+        <span class="status" id="robotStatus">LOADING</span>
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="label">Reputation</span>
+      <span class="value" id="reputation">0</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Successful Missions</span>
+      <span class="value" id="successfulMissions">0</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Failed Missions</span>
+      <span class="value" id="failedMissions">0</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Mission Count</span>
+      <span class="value" id="missionCount">0</span>
+    </div>
+
+    <div class="backend-status" id="backendStatus">
+      Connecting to ON1 Physical AI backend...
+    </div>
+  </section>
+
+
+  <!-- MISSION -->
+  <section class="card">
+    <h2>Mission Execution</h2>
+
+    <div class="row">
+      <span class="label">Task Type</span>
+      <span class="value">Navigation</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Start</span>
+      <span class="value">(0, 0)</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Target</span>
+      <span class="value">(10, 10)</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Mission Status</span>
+      <span class="value">
+        <span class="status" id="missionStatus">PENDING</span>
+      </span>
+    </div>
+
+    <div class="controls">
+      <button id="runButton" onclick="runMission()">
+        Run Mission
+      </button>
+
+      <button
+        class="secondary"
+        id="resetButton"
+        onclick="resetMission()"
+      >
+        Reset View
+      </button>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-bar">
+        <div class="progress" id="progress"></div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <section class="grid">
 
-      <!-- MACHINE -->
-      <div class="card">
-        <h2>Machine Identity</h2>
+  <!-- MAP -->
+  <section class="card full">
+    <h2>Mission Map</h2>
 
-        <div class="section-label">Registered Machine</div>
-        <div class="machine-id">ON1-R001</div>
+    <div class="map" id="map">
 
-        <div id="machineStatus" class="status">
-          <span class="status-dot"></span>
-          IDLE
-        </div>
+      <div class="map-point start-point"></div>
+      <div class="map-point target-point"></div>
 
-        <div style="margin-top:18px;">
-          <div class="section-label">Identity</div>
-          <strong>ON1-MACHINE-001</strong>
-        </div>
+      <div class="robot-point" id="robotPoint"></div>
 
-        <div style="margin-top:14px;">
-          <div class="section-label">Model</div>
-          <span style="color:var(--muted);">ON1 Virtual Navigator</span>
-        </div>
-
-        <div style="margin-top:14px;">
-          <div class="section-label">Operating Mode</div>
-          <span style="color:var(--muted);">Software Simulation</span>
-        </div>
-
-        <div class="button-row">
-          <button id="runButton">Run Mission</button>
-          <button id="resetButton" class="secondary">Reset</button>
-        </div>
-      </div>
-
-      <!-- MISSION -->
-      <div class="card">
-        <h2>Mission</h2>
-
-        <div class="section-label">Task Type</div>
-        <strong>Navigation</strong>
-
-        <div style="margin-top:14px;">
-          <div class="section-label">Route</div>
-          <span style="color:var(--muted);">
-            (0, 0) → (10, 10)
-          </span>
-        </div>
-
-        <div class="mission-map">
-          <div class="map-label start-label">START (0,0)</div>
-          <div class="map-label target-label">TARGET (10,10)</div>
-
-          <div id="target" class="target"></div>
-          <div id="robot" class="robot"></div>
-        </div>
-      </div>
-
-      <!-- TELEMETRY -->
-      <div class="card full">
-        <h2>Live Telemetry</h2>
-
-        <div class="telemetry">
-          <div class="metric">
-            <div id="stepValue" class="metric-value">0</div>
-            <div class="metric-label">STEP</div>
-          </div>
-
-          <div class="metric">
-            <div id="positionValue" class="metric-value">(0, 0)</div>
-            <div class="metric-label">POSITION</div>
-          </div>
-
-          <div class="metric">
-            <div id="distanceValue" class="metric-value">14.14</div>
-            <div class="metric-label">DISTANCE TO TARGET</div>
-          </div>
-
-          <div class="metric">
-            <div id="batteryValue" class="metric-value">100%</div>
-            <div class="metric-label">BATTERY</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- VALIDATION -->
-      <div class="card">
-        <h2>Evidence Validation</h2>
-
-        <div class="checks">
-
-          <div class="check">
-            <span class="check-name">Mission Started</span>
-            <span id="checkStarted" class="pending">PENDING</span>
-          </div>
-
-          <div class="check">
-            <span class="check-name">Mission Completed</span>
-            <span id="checkCompleted" class="pending">PENDING</span>
-          </div>
-
-          <div class="check">
-            <span class="check-name">Telemetry Present</span>
-            <span id="checkTelemetry" class="pending">PENDING</span>
-          </div>
-
-          <div class="check">
-            <span class="check-name">Target Reached</span>
-            <span id="checkTarget" class="pending">PENDING</span>
-          </div>
-
-          <div class="check">
-            <span class="check-name">Robot Identity Present</span>
-            <span id="checkIdentity" class="pending">PENDING</span>
-          </div>
-
-          <div class="check">
-            <span class="check-name">Evidence Generated</span>
-            <span id="checkEvidence" class="pending">PENDING</span>
-          </div>
-
-        </div>
+      <div class="map-label start-label">
+        START (0,0)
       </div>
 
-      <!-- SCORE -->
-      <div class="card">
-        <h2>PoPW-Style Validation Score</h2>
-
-        <div id="scoreValue" class="score">0</div>
-        <div class="score-label">Validation score</div>
-
-        <div class="progress">
-          <div id="scoreBar" class="progress-bar"></div>
-        </div>
-
-        <div style="margin-top:18px;">
-          <div class="section-label">Verification Result</div>
-          <strong id="verificationResult" style="color:var(--muted);">
-            NOT VERIFIED
-          </strong>
-        </div>
+      <div class="map-label target-label">
+        TARGET (10,10)
       </div>
 
-      <!-- EVIDENCE -->
-      <div class="card full">
-        <h2>Mission Evidence Bundle</h2>
+    </div>
+  </section>
 
-        <div class="evidence">
-          <pre id="evidenceOutput">No mission evidence generated yet.</pre>
-        </div>
 
-        <div class="export-area">
-          <div class="section-label">Evidence Export</div>
+  <!-- TELEMETRY -->
+  <section class="card">
+    <h2>Live Telemetry</h2>
 
-          <div class="export-description">
-            Export the completed browser simulation as a structured JSON
-            evidence artifact. This file records the prototype result and
-            does not represent Konnex or blockchain verification.
-          </div>
-
-          <button
-            id="exportButton"
-            class="export"
-            disabled
-          >
-            Export Evidence JSON
-          </button>
-        </div>
+    <div class="telemetry" id="telemetry">
+      <div class="empty">
+        No telemetry available.
       </div>
+    </div>
+  </section>
 
-      <!-- REPUTATION -->
-      <div class="card">
-        <h2>Machine Reputation</h2>
 
-        <div class="section-label">Robot</div>
-        <strong>ON1-R001</strong>
+  <!-- VALIDATION -->
+  <section class="card">
+    <h2>Validation Checks</h2>
 
-        <div style="margin-top:18px;">
-          <div class="score" style="font-size:38px;" id="reputationValue">
-            50
-          </div>
-          <div class="score-label">Reputation score / 100</div>
-        </div>
-
-        <div style="margin-top:18px;">
-          <div class="section-label">Successful Missions</div>
-          <strong id="successfulMissions">0</strong>
-        </div>
-
-        <div style="margin-top:12px;">
-          <div class="section-label">Failed Missions</div>
-          <strong id="failedMissions">0</strong>
-        </div>
+    <div id="validation">
+      <div class="empty">
+        Validation will appear after mission execution.
       </div>
+    </div>
+  </section>
 
-      <!-- MEMORY -->
-      <div class="card">
-        <h2>Machine Memory</h2>
 
-        <div id="memoryEntry" class="memory-entry">
-          <div class="memory-title">No mission memory yet</div>
-          <div class="memory-meta">
-            Run a mission to create the first machine-memory record.
-          </div>
-        </div>
+  <!-- SCORE -->
+  <section class="card">
+    <h2>PoPW-style Verification</h2>
+
+    <div class="score" id="powpScore">0</div>
+
+    <div class="score-label">
+      Verification Score
+    </div>
+
+    <div class="row">
+      <span class="label">Verification Result</span>
+      <span class="value" id="verificationResult">
+        PENDING
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="label">Mission ID</span>
+      <span class="value" id="missionId">—</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Evidence ID</span>
+      <span class="value" id="evidenceId">—</span>
+    </div>
+  </section>
+
+
+  <!-- EVIDENCE -->
+  <section class="card">
+    <h2>Evidence Bundle</h2>
+
+    <div id="evidence">
+      <div class="empty">
+        Evidence will appear after mission verification.
       </div>
+    </div>
 
-    </section>
-  </div>
-</main>
+    <div class="controls">
+      <button
+        class="secondary"
+        id="exportButton"
+        onclick="exportEvidence()"
+        disabled
+      >
+        Export Evidence
+      </button>
+    </div>
+  </section>
+
+
+  <!-- MEMORY -->
+  <section class="card">
+    <h2>Machine Memory</h2>
+
+    <div id="memory">
+      <div class="empty">
+        No backend memory loaded.
+      </div>
+    </div>
+  </section>
+
+
+  <!-- BACKEND RESULT -->
+  <section class="card full">
+    <h2>Backend Result</h2>
+
+    <pre id="backendResult">Waiting for mission execution...</pre>
+  </section>
+
+</div>
 
 <footer>
-  ON1 Physical AI — A DSATECHON1 initiative
+  ON1 Physical AI · DSATECHON1 · Software-first physical AI prototype
 </footer>
 
+</div>
+
+
 <script>
-  /*
-   * ON1 Physical AI
-   * Browser Mission Simulator
-   *
-   * This simulation mirrors the software prototype model:
-   * Identity → Mission → Telemetry → Evidence →
-   * Validation → Reputation → Memory
-   *
-   * It does not connect to Konnex or physical hardware.
-   */
+"use strict";
 
-  const state = {
-    robot: {
-      robotId: "ON1-R001",
-      identity: "ON1-MACHINE-001",
-      model: "ON1 Virtual Navigator",
-      status: "IDLE",
-      reputationScore: 50,
-      successfulMissions: 0,
-      failedMissions: 0,
-      memory: []
-    },
+/* =========================================================
+   ON1 PHYSICAL AI BACKEND
+   ========================================================= */
 
-    mission: {
-      missionId: null,
-      taskType: "Navigation",
-      start: { x: 0, y: 0 },
-      target: { x: 10, y: 10 },
-      telemetry: [],
-      evidence: null,
-      validatorResult: null,
-      powpScore: 0,
-      status: "PENDING"
-    },
+const API_BASE = "https://on1-physical-ai-api.onrender.com";
 
-    running: false,
-    timer: null
-  };
+const ROBOT_ENDPOINT = `${API_BASE}/robot`;
+const MISSION_ENDPOINT = `${API_BASE}/missions`;
 
-  const $ = (id) => document.getElementById(id);
+const ROBOT_TIMEOUT_MS = 30000;
 
-  function utcNow() {
-    return new Date().toISOString();
-  }
+/*
+ * Render free instances can cold-start.
+ * Mission requests therefore receive a longer timeout.
+ */
+const MISSION_TIMEOUT_MS = 90000;
 
-  function generateId(prefix) {
-    return prefix + "-" +
-      Date.now().toString(36).toUpperCase() +
-      "-" +
-      Math.random().toString(36).slice(2, 7).toUpperCase();
-  }
 
-  function distance(a, b) {
-    return Math.sqrt(
-      Math.pow(b.x - a.x, 2) +
-      Math.pow(b.y - a.y, 2)
-    );
-  }
+/* =========================================================
+   STATE
+   ========================================================= */
 
-  function setStatus(text, type = "") {
-    const element = $("machineStatus");
+const state = {
+  robot: null,
+  mission: null,
+  running: false,
+  timer: null,
+  latestBackendResult: null
+};
 
-    element.className = "status " + type;
 
-    element.innerHTML =
-      '<span class="status-dot"></span>' + text;
-  }
+/* =========================================================
+   DOM HELPERS
+   ========================================================= */
 
-  function updateTelemetry(point) {
-    $("stepValue").textContent = point.step;
+function el(id) {
+  return document.getElementById(id);
+}
 
-    $("positionValue").textContent =
-      "(" + point.x.toFixed(1) + ", " + point.y.toFixed(1) + ")";
 
-    $("distanceValue").textContent =
-      point.distanceFromTarget.toFixed(2);
+/* =========================================================
+   FETCH WITH TIMEOUT
+   ========================================================= */
 
-    $("batteryValue").textContent =
-      Math.max(0, point.battery).toFixed(0) + "%";
+async function fetchWithTimeout(url, options = {}, timeout = 30000) {
 
-    const xPercent = 9 + (point.x / 10) * 82;
-    const yPercent = 9 + (point.y / 10) * 82;
+  const controller = new AbortController();
 
-    $("robot").style.left = xPercent + "%";
-    $("robot").style.bottom = yPercent + "%";
-  }
+  const timer = setTimeout(() => {
+    controller.abort();
+  }, timeout);
 
-  function setCheck(id, passed) {
-    const element = $(id);
+  try {
 
-    if (passed) {
-      element.textContent = "PASSED";
-      element.className = "pass";
-    } else {
-      element.textContent = "PENDING";
-      element.className = "pending";
-    }
-  }
-
-  function resetChecks() {
-    [
-      "checkStarted",
-      "checkCompleted",
-      "checkTelemetry",
-      "checkTarget",
-      "checkIdentity",
-      "checkEvidence"
-    ].forEach(id => {
-      $(id).textContent = "PENDING";
-      $(id).className = "pending";
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
     });
+
+    return response;
+
+  } finally {
+
+    clearTimeout(timer);
+
+  }
+}
+
+
+/* =========================================================
+   BACKEND STATUS
+   ========================================================= */
+
+function setBackendStatus(message, type = "") {
+
+  const box = el("backendStatus");
+
+  box.textContent = message;
+
+  box.className = "backend-status";
+
+  if (type) {
+    box.classList.add(type);
+  }
+}
+
+
+/* =========================================================
+   LOAD ROBOT STATE
+   ========================================================= */
+
+async function loadRobot() {
+
+  setBackendStatus(
+    "Connecting to ON1 Physical AI backend..."
+  );
+
+  try {
+
+    const response = await fetchWithTimeout(
+      ROBOT_ENDPOINT,
+      {
+        method: "GET",
+        headers: {
+          "Accept": "application/json"
+        }
+      },
+      ROBOT_TIMEOUT_MS
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Backend returned HTTP ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+
+    if (!data.robot) {
+      throw new Error(
+        "Backend response does not contain robot data."
+      );
+    }
+
+    state.robot = data.robot;
+
+    renderRobot(data.robot);
+
+    setBackendStatus(
+      "Backend online · Firebase state loaded",
+      "online"
+    );
+
+  } catch (error) {
+
+    console.error("Robot load error:", error);
+
+    setBackendStatus(
+      `Backend connection failed: ${error.message}`,
+      "error"
+    );
+
+  }
+}
+
+
+/* =========================================================
+   RENDER ROBOT
+   ========================================================= */
+
+function renderRobot(robot) {
+
+  el("robotId").textContent =
+    robot.robotId || "—";
+
+  el("identity").textContent =
+    robot.identity || "—";
+
+  el("model").textContent =
+    robot.model || "—";
+
+  el("reputation").textContent =
+    Number(robot.reputationScore || 0);
+
+  el("successfulMissions").textContent =
+    Number(robot.successfulMissions || 0);
+
+  el("failedMissions").textContent =
+    Number(robot.failedMissions || 0);
+
+  el("missionCount").textContent =
+    Number(robot.missionCount || 0);
+
+  const status = el("robotStatus");
+
+  status.textContent =
+    String(robot.status || "UNKNOWN").toUpperCase();
+
+  status.className = "status";
+
+  if (
+    String(robot.status || "").toUpperCase() === "RUNNING"
+  ) {
+    status.classList.add("running");
   }
 
-  function resetMissionState() {
-    clearInterval(state.timer);
+  if (
+    String(robot.status || "").toUpperCase() === "IDLE"
+  ) {
+    status.classList.add("success");
+  }
+
+  renderMemory(robot.memory || []);
+}
+
+
+/* =========================================================
+   RENDER MEMORY
+   ========================================================= */
+
+function renderMemory(memory) {
+
+  const container = el("memory");
+
+  if (!Array.isArray(memory) || memory.length === 0) {
+
+    container.innerHTML =
+      `<div class="empty">No backend memory records.</div>`;
+
+    return;
+  }
+
+  const latest = memory[0];
+
+  container.innerHTML = `
+    <div class="row">
+      <span class="label">Latest Memory ID</span>
+      <span class="value">${escapeHtml(latest.memoryId || "—")}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Mission</span>
+      <span class="value">${escapeHtml(latest.missionId || "—")}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Task</span>
+      <span class="value">${escapeHtml(latest.taskType || "—")}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Result</span>
+      <span class="value">${escapeHtml(latest.result || "—")}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">PoPW Score</span>
+      <span class="value">${Number(latest.powpScore || 0)}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Recorded</span>
+      <span class="value">${escapeHtml(latest.recordedAt || "—")}</span>
+    </div>
+  `;
+}
+
+
+/* =========================================================
+   RUN MISSION
+   ========================================================= */
+
+async function runMission() {
+
+  if (state.running) {
+    return;
+  }
+
+  state.running = true;
+
+  const runButton = el("runButton");
+
+  runButton.disabled = true;
+  runButton.textContent = "Running Mission...";
+
+  el("exportButton").disabled = true;
+
+  setMissionStatus("RUNNING");
+
+  el("verificationResult").textContent =
+    "EXECUTING";
+
+  el("powpScore").textContent = "0";
+
+  el("missionId").textContent = "Backend processing...";
+
+  el("evidenceId").textContent = "Backend processing...";
+
+  el("backendResult").textContent =
+    "Submitting navigation mission to ON1 Physical AI backend...";
+
+  setBackendStatus(
+    "Mission submitted · waiting for backend verification",
+    "online"
+  );
+
+  resetTelemetry();
+
+  startVisualMission();
+
+  try {
+
+    /*
+     * The backend is authoritative.
+     * The browser does not create the mission ID,
+     * evidence ID, reputation or verification result.
+     */
+
+    const payload = {
+      start: {
+        x: 0,
+        y: 0
+      },
+      target: {
+        x: 10,
+        y: 10
+      }
+    };
+
+    const response = await fetchWithTimeout(
+      MISSION_ENDPOINT,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+
+        body: JSON.stringify(payload)
+      },
+      MISSION_TIMEOUT_MS
+    );
+
+    if (!response.ok) {
+
+      let detail = "";
+
+      try {
+        const errorData = await response.json();
+        detail = errorData.error || "";
+      } catch (_) {}
+
+      throw new Error(
+        `Mission request failed with HTTP ${response.status}` +
+        (detail ? `: ${detail}` : "")
+      );
+    }
+
+    const result = await response.json();
+
+    state.latestBackendResult = result;
+    state.mission = result.mission || result;
+
+    finishVisualMission();
+
+    renderBackendMission(result);
+
+    /*
+     * Reload authoritative robot/Firebase state.
+     */
+    await loadRobot();
+
+    setBackendStatus(
+      "Mission verified · backend and Firebase updated",
+      "online"
+    );
+
+  } catch (error) {
+
+    console.error("Mission execution error:", error);
+
+    stopVisualMission();
+
+    setMissionStatus("FAILED");
+
+    el("verificationResult").textContent =
+      "FAILED";
+
+    el("backendResult").textContent =
+      JSON.stringify(
+        {
+          error: error.message,
+          note:
+            "No browser-local mission result was created. " +
+            "The backend remains authoritative."
+        },
+        null,
+        2
+      );
+
+    setBackendStatus(
+      `Mission failed: ${error.message}`,
+      "error"
+    );
+
+  } finally {
 
     state.running = false;
 
-    state.robot.status = "IDLE";
+    runButton.disabled = false;
+    runButton.textContent = "Run Mission";
 
-    state.mission = {
-      missionId: null,
-      taskType: "Navigation",
-      start: { x: 0, y: 0 },
-      target: { x: 10, y: 10 },
-      telemetry: [],
-      evidence: null,
-      validatorResult: null,
-      powpScore: 0,
-      status: "PENDING"
-    };
-
-    $("robot").style.left = "9%";
-    $("robot").style.bottom = "9%";
-
-    $("stepValue").textContent = "0";
-    $("positionValue").textContent = "(0, 0)";
-    $("distanceValue").textContent = "14.14";
-    $("batteryValue").textContent = "100%";
-
-    $("scoreValue").textContent = "0";
-    $("scoreBar").style.width = "0%";
-
-    $("verificationResult").textContent = "NOT VERIFIED";
-    $("verificationResult").style.color = "var(--muted)";
-
-    $("evidenceOutput").textContent =
-      "No mission evidence generated yet.";
-
-    $("memoryEntry").innerHTML = `
-      <div class="memory-title">No mission memory yet</div>
-      <div class="memory-meta">
-        Run a mission to create the first machine-memory record.
-      </div>
-    `;
-
-    state.robot.reputationScore = 50;
-    state.robot.successfulMissions = 0;
-    state.robot.failedMissions = 0;
-    state.robot.memory = [];
-
-    $("reputationValue").textContent = "50";
-    $("successfulMissions").textContent = "0";
-    $("failedMissions").textContent = "0";
-
-    resetChecks();
-
-    setStatus("IDLE");
-
-    $("runButton").disabled = false;
-    $("runButton").textContent = "Run Mission";
-
-    $("exportButton").disabled = true;
   }
+}
 
-  function createEvidence() {
-    state.mission.evidence = {
-      evidenceId: generateId("EVD"),
-      missionId: state.mission.missionId,
-      robotId: state.robot.robotId,
-      taskType: state.mission.taskType,
 
-      startPosition: state.mission.start,
-      targetPosition: state.mission.target,
+/* =========================================================
+   VISUAL MISSION ANIMATION
+   ========================================================= */
 
-      telemetryPoints: state.mission.telemetry.length,
+function startVisualMission() {
 
-      missionStartedAt:
-        state.mission.startedAt,
+  stopVisualMission();
 
-      missionCompletedAt:
-        state.mission.completedAt,
+  let step = 0;
 
-      status:
-        state.mission.status,
+  const totalSteps = 10;
 
-      generatedAt:
-        utcNow()
-    };
+  updateRobotPosition(0, 0);
 
-    $("evidenceOutput").textContent =
-      JSON.stringify(state.mission.evidence, null, 2);
-  }
+  el("progress").style.width = "0%";
 
-  function validateMission() {
-    const checks = {
-      missionStarted:
-        Boolean(state.mission.startedAt),
+  state.timer = setInterval(() => {
 
-      missionCompleted:
-        state.mission.status === "COMPLETED" &&
-        Boolean(state.mission.completedAt),
+    step++;
 
-      telemetryPresent:
-        state.mission.telemetry.length > 0,
+    const ratio = Math.min(step / totalSteps, 1);
 
-      targetReached:
-        state.mission.telemetry.length > 0 &&
-        distance(
-          state.mission.telemetry[
-            state.mission.telemetry.length - 1
-          ],
-          state.mission.target
-        ) < 0.01,
+    const x = Math.round(10 * ratio * 100) / 100;
+    const y = Math.round(10 * ratio * 100) / 100;
 
-      robotIdentityPresent:
-        Boolean(state.robot.identity),
+    updateRobotPosition(x, y);
 
-      evidenceGenerated:
-        Boolean(state.mission.evidence)
-    };
+    el("progress").style.width =
+      `${Math.round(ratio * 100)}%`;
 
-    const passed =
-      Object.values(checks)
-        .filter(Boolean)
-        .length;
+    addTelemetry({
+      step,
+      x,
+      y,
+      progress: Math.round(ratio * 100)
+    });
 
-    const total =
-      Object.keys(checks).length;
+    if (step >= totalSteps) {
 
-    state.mission.powpScore =
-      Math.round((passed / total) * 100);
+      /*
+       * Do not mark the mission verified here.
+       * Backend response remains authoritative.
+       */
 
-    state.mission.validatorResult = {
-      validatorId: "ON1-BROWSER-VALIDATOR-001",
-      validatedAt: utcNow(),
-      checks: checks,
-      passedChecks: passed,
-      totalChecks: total,
-      verified:
-        passed === total &&
-        state.mission.status === "COMPLETED"
-    };
-
-    setCheck("checkStarted", checks.missionStarted);
-    setCheck("checkCompleted", checks.missionCompleted);
-    setCheck("checkTelemetry", checks.telemetryPresent);
-    setCheck("checkTarget", checks.targetReached);
-    setCheck("checkIdentity", checks.robotIdentityPresent);
-    setCheck("checkEvidence", checks.evidenceGenerated);
-
-    $("scoreValue").textContent =
-      state.mission.powpScore;
-
-    $("scoreBar").style.width =
-      state.mission.powpScore + "%";
-
-    if (state.mission.validatorResult.verified) {
-      $("verificationResult").textContent = "VERIFIED";
-      $("verificationResult").style.color =
-        "var(--success)";
-    } else {
-      $("verificationResult").textContent =
-        "NOT VERIFIED";
-      $("verificationResult").style.color =
-        "var(--danger)";
-    }
-  }
-
-  function updateReputation() {
-    if (
-      state.mission.validatorResult &&
-      state.mission.validatorResult.verified
-    ) {
-      state.robot.successfulMissions++;
-
-      state.robot.reputationScore =
-        Math.min(
-          100,
-          state.robot.reputationScore + 5
-        );
-    } else {
-      state.robot.failedMissions++;
-
-      state.robot.reputationScore =
-        Math.max(
-          0,
-          state.robot.reputationScore - 5
-        );
+      stopVisualMission();
     }
 
-    $("reputationValue").textContent =
-      state.robot.reputationScore.toFixed(0);
+  }, 350);
+}
 
-    $("successfulMissions").textContent =
-      state.robot.successfulMissions;
 
-    $("failedMissions").textContent =
-      state.robot.failedMissions;
+function finishVisualMission() {
+
+  stopVisualMission();
+
+  updateRobotPosition(10, 10);
+
+  el("progress").style.width = "100%";
+}
+
+
+function stopVisualMission() {
+
+  if (state.timer) {
+
+    clearInterval(state.timer);
+
+    state.timer = null;
   }
+}
 
-  function updateMemory() {
-    const memory = {
-      memoryId: generateId("MEM"),
-      missionId: state.mission.missionId,
-      taskType: state.mission.taskType,
-      result:
-        state.mission.validatorResult.verified
-          ? "Verified"
-          : "Failed",
-      powpScore: state.mission.powpScore,
-      recordedAt: utcNow()
-    };
 
-    state.robot.memory.push(memory);
+/* =========================================================
+   ROBOT POSITION
+   ========================================================= */
 
-    $("memoryEntry").innerHTML = `
-      <div class="memory-title">
-        ${memory.taskType} Mission
-      </div>
+function updateRobotPosition(x, y) {
 
-      <div class="memory-meta">
-        Result: <strong>${memory.result}</strong>
-      </div>
+  /*
+   * Map coordinates:
+   * (0,0)   -> left 12%, top 82%
+   * (10,10) -> left 88%, top 18%
+   */
 
-      <div class="memory-meta">
-        PoPW-style score: ${memory.powpScore}/100
-      </div>
+  const left =
+    12 + ((Number(x) / 10) * 76);
 
-      <div class="memory-meta">
-        Memory ID: ${memory.memoryId}
-      </div>
-    `;
-  }
+  const top =
+    82 - ((Number(y) / 10) * 64);
 
-  function createExportArtifact() {
-    return {
-      project: "ON1 Physical AI",
+  const robotPoint = el("robotPoint");
 
-      prototypeVersion: "0.3.0",
+  robotPoint.style.left =
+    `${Math.max(12, Math.min(88, left))}%`;
 
-      simulation: {
-        type: "browser",
-        hardwareConnected: false,
-        konnexIntegrated: false,
-        onChainVerified: false
-      },
+  robotPoint.style.top =
+    `${Math.max(18, Math.min(82, top))}%`;
+}
 
-      generatedAt: utcNow(),
 
-      robot: {
-        robotId: state.robot.robotId,
-        identity: state.robot.identity,
-        model: state.robot.model,
-        status: state.robot.status,
-        reputationScore: state.robot.reputationScore,
-        successfulMissions: state.robot.successfulMissions,
-        failedMissions: state.robot.failedMissions,
-        memory: state.robot.memory
-      },
+/* =========================================================
+   TELEMETRY
+   ========================================================= */
 
-      mission: {
-        missionId: state.mission.missionId,
-        taskType: state.mission.taskType,
-        start: state.mission.start,
-        target: state.mission.target,
-        startedAt: state.mission.startedAt,
-        completedAt: state.mission.completedAt,
-        telemetry: state.mission.telemetry,
-        evidence: state.mission.evidence,
-        validatorResult: state.mission.validatorResult,
-        powpScore: state.mission.powpScore,
-        status: state.mission.status
-      }
-    };
-  }
+function resetTelemetry() {
 
-  function exportEvidence() {
-    if (
-      !state.mission.validatorResult ||
-      !state.mission.validatorResult.verified
-    ) {
-      return;
-    }
+  el("telemetry").innerHTML = "";
+}
 
-    const artifact = createExportArtifact();
 
-    const json = JSON.stringify(
-      artifact,
+function addTelemetry(point) {
+
+  const container = el("telemetry");
+
+  const row = document.createElement("div");
+
+  row.className = "telemetry-row";
+
+  row.textContent =
+    `Step ${point.step} · ` +
+    `Position (${point.x}, ${point.y}) · ` +
+    `${point.progress}%`;
+
+  container.appendChild(row);
+
+  container.scrollTop =
+    container.scrollHeight;
+}
+
+
+/* =========================================================
+   RENDER BACKEND MISSION
+   ========================================================= */
+
+function renderBackendMission(result) {
+
+  const mission =
+    result.mission || result;
+
+  const missionId =
+    mission.missionId ||
+    result.missionId ||
+    "—";
+
+  const telemetry =
+    Array.isArray(mission.telemetry)
+      ? mission.telemetry
+      : [];
+
+  const validator =
+    mission.validatorResult ||
+    result.validatorResult ||
+    null;
+
+  const evidence =
+    mission.evidence ||
+    result.evidence ||
+    null;
+
+  const powp =
+    Number(
+      mission.powpScore ??
+      result.powpScore ??
+      0
+    );
+
+  const status =
+    mission.status ||
+    result.status ||
+    "UNKNOWN";
+
+  const verification =
+    mission.verification ||
+    result.verification ||
+    null;
+
+  el("missionId").textContent =
+    missionId;
+
+  el("powpScore").textContent =
+    powp;
+
+  el("verificationResult").textContent =
+    verificationResultText(
+      verification,
+      status
+    );
+
+  setMissionStatus(
+    String(status).toUpperCase()
+  );
+
+  renderTelemetryFromBackend(telemetry);
+
+  renderValidation(validator);
+
+  renderEvidence(
+    evidence,
+    result
+  );
+
+  const evidenceId =
+    evidence?.evidenceId ||
+    evidence?.id ||
+    result.evidenceId ||
+    "—";
+
+  el("evidenceId").textContent =
+    evidenceId;
+
+  el("exportButton").disabled = false;
+
+  el("backendResult").textContent =
+    JSON.stringify(
+      result,
       null,
       2
     );
+}
 
-    const blob = new Blob(
-      [json],
-      { type: "application/json" }
+
+/* =========================================================
+   BACKEND TELEMETRY
+   ========================================================= */
+
+function renderTelemetryFromBackend(telemetry) {
+
+  if (!Array.isArray(telemetry) || telemetry.length === 0) {
+    return;
+  }
+
+  const container = el("telemetry");
+
+  container.innerHTML = "";
+
+  telemetry.forEach((point, index) => {
+
+    const row = document.createElement("div");
+
+    row.className = "telemetry-row";
+
+    const step =
+      point.step ??
+      point.stepNumber ??
+      index + 1;
+
+    const x =
+      point.x ??
+      point.position?.x ??
+      "—";
+
+    const y =
+      point.y ??
+      point.position?.y ??
+      "—";
+
+    row.textContent =
+      `Step ${step} · Position (${x}, ${y})`;
+
+    container.appendChild(row);
+
+  });
+
+  const last =
+    telemetry[telemetry.length - 1];
+
+  const lastX =
+    last?.x ??
+    last?.position?.x ??
+    10;
+
+  const lastY =
+    last?.y ??
+    last?.position?.y ??
+    10;
+
+  updateRobotPosition(
+    Number(lastX),
+    Number(lastY)
+  );
+}
+
+
+/* =========================================================
+   VALIDATION
+   ========================================================= */
+
+function renderValidation(validator) {
+
+  const container = el("validation");
+
+  if (!validator) {
+
+    container.innerHTML =
+      `<div class="empty">No validator result returned.</div>`;
+
+    return;
+  }
+
+  let checks = [];
+
+  if (Array.isArray(validator.checks)) {
+
+    checks = validator.checks;
+
+  } else {
+
+    /*
+     * Supports the common object format:
+     * {
+     *   path_valid: true,
+     *   telemetry_valid: true,
+     *   ...
+     * }
+     */
+
+    Object.entries(validator).forEach(
+      ([key, value]) => {
+
+        if (
+          typeof value === "boolean" ||
+          typeof value === "string" ||
+          typeof value === "number"
+        ) {
+
+          checks.push({
+            name: key,
+            passed:
+              value === true ||
+              String(value).toLowerCase() === "passed" ||
+              String(value).toLowerCase() === "pass"
+          });
+
+        }
+
+      }
     );
-
-    const url =
-      URL.createObjectURL(blob);
-
-    const link =
-      document.createElement("a");
-
-    link.href = url;
-    link.download = "mission-result.json";
-
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    URL.revokeObjectURL(url);
   }
 
-  function completeMission() {
-    state.mission.status = "COMPLETED";
-    state.mission.completedAt = utcNow();
+  if (checks.length === 0) {
 
-    state.robot.status = "IDLE";
+    container.innerHTML =
+      `<pre>${escapeHtml(
+        JSON.stringify(validator, null, 2)
+      )}</pre>`;
 
-    createEvidence();
-
-    validateMission();
-
-    updateReputation();
-
-    updateMemory();
-
-    if (
-      state.mission.validatorResult &&
-      state.mission.validatorResult.verified
-    ) {
-      $("exportButton").disabled = false;
-    }
-
-    setStatus("MISSION VERIFIED", "success");
-
-    $("runButton").disabled = false;
-    $("runButton").textContent = "Run Mission Again";
+    return;
   }
 
-  function runMission() {
-    if (state.running) {
-      return;
-    }
+  container.innerHTML = "";
 
-    resetMissionState();
+  checks.forEach(check => {
 
-    state.running = true;
+    const row = document.createElement("div");
 
-    state.robot.status = "EXECUTING";
+    row.className = "check";
 
-    state.mission.missionId =
-      generateId("MSN");
+    const name =
+      check.name ||
+      check.check ||
+      check.label ||
+      "Validation";
 
-    state.mission.status = "RUNNING";
-    state.mission.startedAt = utcNow();
+    const passed =
+      check.passed === true ||
+      check.valid === true ||
+      check.status === "PASSED" ||
+      check.status === "PASS";
 
-    setStatus("EXECUTING", "running");
+    row.innerHTML = `
+      <span>${escapeHtml(
+        formatLabel(name)
+      )}</span>
 
-    setCheck("checkStarted", true);
+      <span class="${passed ? "pass" : "fail"}">
+        ${passed ? "PASSED" : "FAILED"}
+      </span>
+    `;
 
-    $("runButton").disabled = true;
-    $("runButton").textContent = "Mission Running...";
+    container.appendChild(row);
 
-    let step = 0;
+  });
+}
 
-    const totalSteps = 10;
 
-    state.timer = setInterval(() => {
+/* =========================================================
+   EVIDENCE
+   ========================================================= */
 
-      step++;
+function renderEvidence(evidence, result) {
 
-      const progress =
-        step / totalSteps;
+  const container = el("evidence");
 
-      const x =
-        state.mission.start.x +
-        (
-          state.mission.target.x -
-          state.mission.start.x
-        ) * progress;
+  if (!evidence) {
 
-      const y =
-        state.mission.start.y +
-        (
-          state.mission.target.y -
-          state.mission.start.y
-        ) * progress;
+    container.innerHTML =
+      `<div class="empty">No evidence object returned.</div>`;
 
-      const point = {
-        timestamp: utcNow(),
-        step: step,
-        x: x,
-        y: y,
-        distanceFromTarget:
-          distance(
-            { x: x, y: y },
-            state.mission.target
-          ),
-        battery:
-          100 - (step * 2),
-        speed: 1.0
-      };
+    return;
+  }
 
-      state.mission.telemetry.push(point);
+  const artifact =
+    result.evidenceArtifact ||
+    evidence.evidenceArtifact ||
+    null;
 
-      updateTelemetry(point);
+  let html = "";
 
-      if (step >= totalSteps) {
-        clearInterval(state.timer);
+  Object.entries(evidence).forEach(
+    ([key, value]) => {
 
-        state.running = false;
-
-        setTimeout(() => {
-          completeMission();
-        }, 500);
+      if (
+        value === null ||
+        value === undefined ||
+        typeof value === "object"
+      ) {
+        return;
       }
 
-    }, 450);
+      html += `
+        <div class="row">
+          <span class="label">
+            ${escapeHtml(formatLabel(key))}
+          </span>
+
+          <span class="value">
+            ${escapeHtml(String(value))}
+          </span>
+        </div>
+      `;
+
+    }
+  );
+
+  if (artifact) {
+
+    html += `
+      <div class="row">
+        <span class="label">Evidence Artifact</span>
+        <span class="value">Available</span>
+      </div>
+    `;
+
   }
 
-  $("runButton").addEventListener(
-    "click",
-    runMission
+  if (!html) {
+
+    html =
+      `<pre>${escapeHtml(
+        JSON.stringify(evidence, null, 2)
+      )}</pre>`;
+
+  }
+
+  container.innerHTML = html;
+}
+
+
+/* =========================================================
+   STATUS HELPERS
+   ========================================================= */
+
+function setMissionStatus(status) {
+
+  const normalized =
+    String(status || "PENDING").toUpperCase();
+
+  const element =
+    el("missionStatus");
+
+  element.textContent =
+    normalized;
+
+  element.className = "status";
+
+  if (
+    normalized === "RUNNING" ||
+    normalized === "EXECUTING"
+  ) {
+    element.classList.add("running");
+  }
+
+  if (
+    normalized === "COMPLETED" ||
+    normalized === "VERIFIED" ||
+    normalized === "SUCCESS"
+  ) {
+    element.classList.add("success");
+  }
+
+  if (
+    normalized === "FAILED" ||
+    normalized === "ERROR"
+  ) {
+    element.classList.add("failed");
+  }
+}
+
+
+function verificationResultText(
+  verification,
+  status
+) {
+
+  if (typeof verification === "string") {
+    return verification;
+  }
+
+  if (verification && typeof verification === "object") {
+
+    if (verification.result) {
+      return verification.result;
+    }
+
+    if (verification.status) {
+      return verification.status;
+    }
+
+    if (verification.verified === true) {
+      return "VERIFIED";
+    }
+  }
+
+  if (
+    String(status).toUpperCase() === "COMPLETED"
+  ) {
+    return "VERIFIED";
+  }
+
+  return String(status || "PENDING").toUpperCase();
+}
+
+
+/* =========================================================
+   RESET VIEW
+   ========================================================= */
+
+async function resetMission() {
+
+  stopVisualMission();
+
+  state.mission = null;
+  state.latestBackendResult = null;
+
+  updateRobotPosition(0, 0);
+
+  el("progress").style.width = "0%";
+
+  el("missionStatus").textContent =
+    "PENDING";
+
+  el("missionStatus").className =
+    "status";
+
+  el("verificationResult").textContent =
+    "PENDING";
+
+  el("powpScore").textContent =
+    "0";
+
+  el("missionId").textContent =
+    "—";
+
+  el("evidenceId").textContent =
+    "—";
+
+  el("telemetry").innerHTML =
+    `<div class="empty">No telemetry available.</div>`;
+
+  el("validation").innerHTML =
+    `<div class="empty">
+      Validation will appear after mission execution.
+    </div>`;
+
+  el("evidence").innerHTML =
+    `<div class="empty">
+      Evidence will appear after mission verification.
+    </div>`;
+
+  el("backendResult").textContent =
+    "Waiting for mission execution...";
+
+  el("exportButton").disabled = true;
+
+  await loadRobot();
+}
+
+
+/* =========================================================
+   EXPORT AUTHORITATIVE BACKEND RESULT
+   ========================================================= */
+
+function exportEvidence() {
+
+  if (!state.latestBackendResult) {
+    return;
+  }
+
+  const blob = new Blob(
+    [
+      JSON.stringify(
+        state.latestBackendResult,
+        null,
+        2
+      )
+    ],
+    {
+      type: "application/json"
+    }
   );
 
-  $("resetButton").addEventListener(
-    "click",
-    resetMissionState
-  );
+  const url =
+    URL.createObjectURL(blob);
 
-  $("exportButton").addEventListener(
-    "click",
-    exportEvidence
-  );
+  const link =
+    document.createElement("a");
 
-  resetMissionState();
+  link.href = url;
+
+  const missionId =
+    state.latestBackendResult?.mission?.missionId ||
+    state.latestBackendResult?.missionId ||
+    "mission";
+
+  link.download =
+    `on1-physical-ai-${missionId}.json`;
+
+  document.body.appendChild(link);
+
+  link.click();
+
+  link.remove();
+
+  URL.revokeObjectURL(url);
+}
+
+
+/* =========================================================
+   FORMATTING
+   ========================================================= */
+
+function formatLabel(value) {
+
+  return String(value)
+    .replace(/([A-Z])/g, " $1")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^./, char => char.toUpperCase());
+}
+
+
+function escapeHtml(value) {
+
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+
+/* =========================================================
+   INITIAL LOAD
+   ========================================================= */
+
+window.addEventListener(
+  "DOMContentLoaded",
+  () => {
+    loadRobot();
+  }
+);
+
 </script>
 
 </body>
