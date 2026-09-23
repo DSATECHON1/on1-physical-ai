@@ -1,15 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  <title>ON1 Physical AI — Machine Intelligence Infrastructure</title><meta
+name="description"
+content="ON1 Physical AI is a software-first physical AI prototype exploring machine identity, mission execution, verifiable work evidence, validation, memory, and reputation."
 
-  <title>ON1 Physical AI — Machine Intelligence Infrastructure</title>
-
-  <meta
-    name="description"
-    content="ON1 Physical AI is a software-first physical AI prototype exploring machine identity, mission execution, verifiable work evidence, validation, memory, and reputation."
-  >
+«»
 
   <style>
     :root {
@@ -22,6 +18,7 @@
       --accent: #39d9ff;
       --success: #46e6a5;
       --warning: #ffd166;
+      --danger: #ff6b6b;
       --shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
     }
 
@@ -165,11 +162,18 @@
       max-width: 700px;
     }
 
+    .demo-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      flex-shrink: 0;
+      min-width: 210px;
+    }
+
     .demo-button {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      flex-shrink: 0;
       padding: 12px 18px;
       border-radius: 10px;
       background: var(--accent);
@@ -178,10 +182,54 @@
       font-size: 14px;
       font-weight: 800;
       border: 1px solid var(--accent);
+      cursor: pointer;
     }
 
     .demo-button:hover {
       filter: brightness(1.08);
+    }
+
+    .demo-button.secondary {
+      background: transparent;
+      color: var(--accent);
+    }
+
+    .demo-button:disabled {
+      opacity: 0.55;
+      cursor: wait;
+      filter: none;
+    }
+
+    .api-status {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: rgba(255, 255, 255, 0.025);
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .api-status strong {
+      color: var(--text);
+    }
+
+    .api-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      margin-right: 7px;
+      border-radius: 50%;
+      background: var(--warning);
+    }
+
+    .api-indicator.online {
+      background: var(--success);
+    }
+
+    .api-indicator.offline {
+      background: var(--danger);
     }
 
     .grid {
@@ -321,6 +369,18 @@
       font-weight: 800;
     }
 
+    .warning {
+      color: var(--warning);
+      font-weight: 800;
+    }
+
+    .api-note {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
     footer {
       padding: 24px 0 34px;
       border-top: 1px solid var(--border);
@@ -332,7 +392,11 @@
     @media (max-width: 800px) {
       .demo-content {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
+      }
+
+      .demo-actions {
+        width: 100%;
       }
 
       .demo-button {
@@ -352,319 +416,732 @@
         grid-column: span 12;
       }
     }
-  </style>
-</head>
-
-<body>
-
-<header>
+  </style></head><body><header>
   <div class="container">
     <div class="brand">
-      <div class="logo">ON1</div>
-
-      <div>
-        <div class="brand-title">ON1 Physical AI</div>
-        <div class="brand-subtitle">
-          Machine Intelligence Infrastructure
-        </div>
-      </div>
+      <div class="logo">ON1</div>  <div>
+    <div class="brand-title">ON1 Physical AI</div>
+    <div class="brand-subtitle">
+      Machine Intelligence Infrastructure
     </div>
   </div>
-</header>
-
-<main>
-  <div class="container">
-
-    <section class="hero">
-
-      <div class="eyebrow">
-        Software-First Physical AI Prototype
-      </div>
-
-      <h1>
-        Machine Intelligence Infrastructure
-      </h1>
-
-      <p>
-        Building a software foundation for machine identity,
-        mission execution, verifiable work evidence, validation,
-        machine memory, and reputation.
-      </p>
-
-      <div class="prototype-banner">
-        <strong>Prototype status:</strong>
-        ON1 Physical AI currently uses a software-simulated machine.
-        The prototype does not yet control physical hardware and is
-        not connected to the live Konnex network.
-      </div>
-
-      <!-- INTERACTIVE DEMO -->
-      <div class="demo-card">
-
-        <div class="demo-content">
-
-          <div>
-            <div class="demo-title">
-              Run the Interactive Mission Demo
-            </div>
-
-            <div class="demo-text">
-              Launch the browser-based simulator and watch a virtual
-              machine receive a navigation mission, generate telemetry,
-              produce evidence, pass validation, receive a PoPW-style
-              score, update its reputation, and record machine memory.
-            </div>
-          </div>
-
-          <a
-            class="demo-button"
-            href="simulator.html"
-          >
-            Launch Mission Simulator →
-          </a>
-
-        </div>
-
-      </div>
-
-    </section>
-
-    <!-- NETWORK OVERVIEW -->
-
-    <section class="grid">
-
-      <div class="card full">
-        <h2>Prototype Network Overview</h2>
-
-        <div class="metric-grid">
-
-          <div class="metric">
-            <div class="metric-value">
-              1
-            </div>
-
-            <div class="metric-label">
-              REGISTERED MACHINE
-            </div>
-          </div>
-
-          <div class="metric">
-            <div class="metric-value">
-              1
-            </div>
-
-            <div class="metric-label">
-              MISSIONS EXECUTED
-            </div>
-          </div>
-
-          <div class="metric">
-            <div class="metric-value">
-              1
-            </div>
-
-            <div class="metric-label">
-              VERIFIED WORK
-            </div>
-          </div>
-
-          <div class="metric">
-            <div
-              class="metric-value"
-              style="color:var(--accent);"
-            >
-              SIM
-            </div>
-
-            <div class="metric-label">
-              NETWORK STATE
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- MACHINE REGISTRY -->
-
-      <div class="card">
-        <h2>Machine Registry</h2>
-
-        <div class="list">
-
-          <div class="list-item">
-
-            <div class="list-title">
-              ON1 Virtual Navigator
-            </div>
-
-            <div class="list-meta">
-              Robot ID: ON1-R001<br>
-              Machine Identity: ON1-MACHINE-001<br>
-              Status: IDLE
-            </div>
-
-          </div>
-
-        </div>
-      </div>
-
-      <!-- LATEST MISSION -->
-
-      <div class="card">
-        <h2>Latest Mission</h2>
-
-        <div class="list">
-
-          <div class="list-item">
-
-            <div class="list-title">
-              Navigation Mission
-            </div>
-
-            <div class="list-meta">
-              Machine: ON1-R001<br>
-              Route: (0,0) → (10,10)<br>
-              Validation Score:
-              <span class="verified">
-                100/100
-              </span>
-            </div>
-
-          </div>
-
-        </div>
-      </div>
-
-      <!-- VALIDATION -->
-
-      <div class="card">
-        <h2>Validation</h2>
-
-        <div class="list">
-
-          <div class="list-item">
-
-            <div class="list-title">
-              Evidence Verification
-            </div>
-
-            <div class="list-meta">
-              Local prototype validator<br>
-              Checks passed:
-              <span class="verified">
-                6/6
-              </span><br>
-              Result:
-              <span class="verified">
-                VERIFIED
-              </span>
-            </div>
-
-          </div>
-
-        </div>
-      </div>
-
-      <!-- REPUTATION -->
-
-      <div class="card">
-        <h2>Machine Reputation</h2>
-
-        <div class="list">
-
-          <div class="list-item">
-
-            <div class="list-title">
-              ON1-R001
-            </div>
-
-            <div class="list-meta">
-              Reputation Score:
-              <strong style="color:var(--success);">
-                55/100
-              </strong><br>
-              Successful Missions: 1<br>
-              Failed Missions: 0
-            </div>
-
-          </div>
-
-        </div>
-      </div>
-
-      <!-- ARCHITECTURE -->
-
-      <div class="card full">
-        <h2>Prototype Architecture</h2>
-
-        <div class="architecture">
-
-          <div class="architecture-step">
-            <span>01</span>
-            Identity
-          </div>
-
-          <div class="architecture-step">
-            <span>02</span>
-            Mission
-          </div>
-
-          <div class="architecture-step">
-            <span>03</span>
-            Telemetry
-          </div>
-
-          <div class="architecture-step">
-            <span>04</span>
-            Evidence
-          </div>
-
-          <div class="architecture-step">
-            <span>05</span>
-            Validation
-          </div>
-
-        </div>
-      </div>
-
-      <!-- MEMORY -->
-
-      <div class="card full">
-        <h2>Machine Memory</h2>
-
-        <div class="list">
-
-          <div class="list-item">
-
-            <div class="list-title">
-              Navigation Mission
-            </div>
-
-            <div class="list-meta">
-              Robot: ON1-R001<br>
-              Result:
-              <span class="verified">
-                Verified
-              </span><br>
-              PoPW-style Score:
-              <span class="verified">
-                100/100
-              </span>
-            </div>
-
-          </div>
-
-        </div>
-      </div>
-
-    </section>
+</div>
 
   </div>
-</main>
+</header><main>
+  <div class="container"><section class="hero">
 
-<footer>
+  <div class="eyebrow">
+    Software-First Physical AI Prototype
+  </div>
+
+  <h1>
+    Machine Intelligence Infrastructure
+  </h1>
+
+  <p>
+    Building a software foundation for machine identity,
+    mission execution, verifiable work evidence, validation,
+    machine memory, and reputation.
+  </p>
+
+  <div class="prototype-banner">
+    <strong>Prototype status:</strong>
+    ON1 Physical AI currently uses a software-simulated machine.
+    The prototype does not yet control physical hardware and is
+    not connected to the live Konnex network.
+  </div>
+
+  <!-- LIVE API + INTERACTIVE DEMO -->
+
+  <div class="demo-card">
+
+    <div class="demo-content">
+
+      <div>
+        <div class="demo-title">
+          Live Mission Infrastructure
+        </div>
+
+        <div class="demo-text">
+          The ON1 Physical AI backend is now deployed as a live API.
+          You can inspect the machine state or deliberately execute
+          a software-simulated mission through the API.
+        </div>
+      </div>
+
+      <div class="demo-actions">
+
+        <a
+          class="demo-button secondary"
+          href="simulator.html"
+        >
+          Browser Mission Simulator →
+        </a>
+
+        <button
+          id="runMissionButton"
+          class="demo-button"
+          type="button"
+        >
+          Run Live Mission →
+        </button>
+
+        <button
+          id="refreshButton"
+          class="demo-button secondary"
+          type="button"
+        >
+          Refresh Live Data
+        </button>
+
+      </div>
+
+    </div>
+
+    <div class="api-status" id="apiStatus">
+      <span class="api-indicator" id="apiIndicator"></span>
+      <strong>Live API:</strong>
+      Checking connection...
+    </div>
+
+  </div>
+
+</section>
+
+<!-- NETWORK OVERVIEW -->
+
+<section class="grid">
+
+  <div class="card full">
+    <h2>Prototype Network Overview</h2>
+
+    <div class="metric-grid">
+
+      <div class="metric">
+        <div
+          class="metric-value"
+          id="machineCount"
+        >
+          1
+        </div>
+
+        <div class="metric-label">
+          REGISTERED MACHINE
+        </div>
+      </div>
+
+      <div class="metric">
+        <div
+          class="metric-value"
+          id="missionCount"
+        >
+          —
+        </div>
+
+        <div class="metric-label">
+          MISSIONS EXECUTED
+        </div>
+      </div>
+
+      <div class="metric">
+        <div
+          class="metric-value"
+          id="verifiedWork"
+        >
+          —
+        </div>
+
+        <div class="metric-label">
+          VERIFIED WORK
+        </div>
+      </div>
+
+      <div class="metric">
+        <div
+          class="metric-value"
+          style="color:var(--accent);"
+        >
+          SIM
+        </div>
+
+        <div class="metric-label">
+          NETWORK STATE
+        </div>
+      </div>
+
+    </div>
+
+    <div class="api-note">
+      Live metrics are supplied by the ON1 Physical AI backend API.
+      They represent the current software-simulated machine state.
+    </div>
+  </div>
+
+  <!-- MACHINE REGISTRY -->
+
+  <div class="card">
+    <h2>Machine Registry</h2>
+
+    <div class="list">
+
+      <div class="list-item">
+
+        <div
+          class="list-title"
+          id="robotModel"
+        >
+          ON1 Virtual Navigator
+        </div>
+
+        <div class="list-meta">
+          Robot ID:
+          <span id="robotId">
+            ON1-R001
+          </span>
+          <br>
+
+          Machine Identity:
+          <span id="robotIdentity">
+            ON1-MACHINE-001
+          </span>
+          <br>
+
+          Status:
+          <span
+            id="robotStatus"
+            class="verified"
+          >
+            IDLE
+          </span>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- LATEST MISSION -->
+
+  <div class="card">
+    <h2>Latest Mission</h2>
+
+    <div class="list">
+
+      <div class="list-item">
+
+        <div class="list-title">
+          Navigation Mission
+        </div>
+
+        <div class="list-meta">
+          Machine:
+          <span id="missionRobot">
+            ON1-R001
+          </span>
+          <br>
+
+          Route:
+          (0,0) → (10,10)
+          <br>
+
+          Validation Score:
+          <span
+            id="validationScore"
+            class="verified"
+          >
+            100/100
+          </span>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- VALIDATION -->
+
+  <div class="card">
+    <h2>Validation</h2>
+
+    <div class="list">
+
+      <div class="list-item">
+
+        <div class="list-title">
+          Evidence Verification
+        </div>
+
+        <div class="list-meta">
+          Local prototype validator
+          <br>
+
+          Checks passed:
+          <span
+            id="validationChecks"
+            class="verified"
+          >
+            6/6
+          </span>
+
+          <br>
+
+          Result:
+          <span
+            id="validationResult"
+            class="verified"
+          >
+            VERIFIED
+          </span>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- REPUTATION -->
+
+  <div class="card">
+    <h2>Machine Reputation</h2>
+
+    <div class="list">
+
+      <div class="list-item">
+
+        <div
+          class="list-title"
+          id="reputationRobot"
+        >
+          ON1-R001
+        </div>
+
+        <div class="list-meta">
+          Reputation Score:
+          <strong
+            id="reputationScore"
+            style="color:var(--success);"
+          >
+            50/100
+          </strong>
+
+          <br>
+
+          Successful Missions:
+          <span id="successfulMissions">
+            0
+          </span>
+
+          <br>
+
+          Failed Missions:
+          <span id="failedMissions">
+            0
+          </span>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ARCHITECTURE -->
+
+  <div class="card full">
+    <h2>Prototype Architecture</h2>
+
+    <div class="architecture">
+
+      <div class="architecture-step">
+        <span>01</span>
+        Identity
+      </div>
+
+      <div class="architecture-step">
+        <span>02</span>
+        Mission
+      </div>
+
+      <div class="architecture-step">
+        <span>03</span>
+        Telemetry
+      </div>
+
+      <div class="architecture-step">
+        <span>04</span>
+        Evidence
+      </div>
+
+      <div class="architecture-step">
+        <span>05</span>
+        Validation
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MEMORY -->
+
+  <div class="card full">
+    <h2>Machine Memory</h2>
+
+    <div
+      class="list"
+      id="memoryList"
+    >
+
+      <div class="list-item">
+
+        <div class="list-title">
+          Waiting for live machine data
+        </div>
+
+        <div class="list-meta">
+          Connect to the backend API to load
+          machine memory.
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+</section>
+
+  </div>
+</main><footer>
   ON1 Physical AI — A DSATECHON1 initiative
-</footer>
+</footer><script>
+  const API_BASE =
+    "https://on1-physical-ai-api.onrender.com";
 
-</body>
+  const apiStatus = document.getElementById("apiStatus");
+  const apiIndicator = document.getElementById("apiIndicator");
+  const refreshButton = document.getElementById("refreshButton");
+  const runMissionButton = document.getElementById("runMissionButton");
+
+  function setApiStatus(message, state) {
+    apiIndicator.className = "api-indicator";
+
+    if (state === "online") {
+      apiIndicator.classList.add("online");
+    }
+
+    if (state === "offline") {
+      apiIndicator.classList.add("offline");
+    }
+
+    apiStatus.innerHTML =
+      '<span class="api-indicator ' +
+      (state === "online"
+        ? "online"
+        : state === "offline"
+          ? "offline"
+          : "") +
+      '"></span>' +
+      '<strong>Live API:</strong> ' +
+      message;
+  }
+
+  function safeNumber(value, fallback = 0) {
+    const number = Number(value);
+    return Number.isFinite(number)
+      ? number
+      : fallback;
+  }
+
+  function updateRobotData(data) {
+    if (!data || !data.robot) {
+      throw new Error("Invalid robot response.");
+    }
+
+    const robot = data.robot;
+
+    document.getElementById("machineCount").textContent = "1";
+
+    document.getElementById("missionCount").textContent =
+      safeNumber(robot.missionCount);
+
+    document.getElementById("verifiedWork").textContent =
+      safeNumber(robot.successfulMissions);
+
+    document.getElementById("robotModel").textContent =
+      robot.model || "ON1 Virtual Navigator";
+
+    document.getElementById("robotId").textContent =
+      robot.robotId || "ON1-R001";
+
+    document.getElementById("robotIdentity").textContent =
+      robot.identity || "ON1-MACHINE-001";
+
+    document.getElementById("robotStatus").textContent =
+      robot.status || "IDLE";
+
+    document.getElementById("missionRobot").textContent =
+      robot.robotId || "ON1-R001";
+
+    document.getElementById("reputationRobot").textContent =
+      robot.robotId || "ON1-R001";
+
+    document.getElementById("reputationScore").textContent =
+      safeNumber(robot.reputationScore) + "/100";
+
+    document.getElementById("successfulMissions").textContent =
+      safeNumber(robot.successfulMissions);
+
+    document.getElementById("failedMissions").textContent =
+      safeNumber(robot.failedMissions);
+
+    const memoryList =
+      document.getElementById("memoryList");
+
+    memoryList.innerHTML = "";
+
+    if (
+      Array.isArray(robot.memory) &&
+      robot.memory.length > 0
+    ) {
+      const memories =
+        robot.memory.slice().reverse();
+
+      memories.forEach(function(memory) {
+        const item =
+          document.createElement("div");
+
+        item.className = "list-item";
+
+        const title =
+          document.createElement("div");
+
+        title.className = "list-title";
+
+        title.textContent =
+          memory.missionType ||
+          memory.mission ||
+          "Mission Memory";
+
+        const meta =
+          document.createElement("div");
+
+        meta.className = "list-meta";
+
+        const result =
+          memory.result ||
+          "Verified";
+
+        const score =
+          memory.popwScore ??
+          memory.popwStyleScore ??
+          100;
+
+        meta.innerHTML =
+          "Robot: " +
+          (memory.robotId || robot.robotId || "ON1-R001") +
+          "<br>" +
+          "Result: " +
+          '<span class="verified">' +
+          result +
+          "</span><br>" +
+          "PoPW-style Score: " +
+          '<span class="verified">' +
+          score +
+          "/100</span>";
+
+        item.appendChild(title);
+        item.appendChild(meta);
+
+        memoryList.appendChild(item);
+      });
+    } else {
+      const item =
+        document.createElement("div");
+
+      item.className = "list-item";
+
+      item.innerHTML =
+        '<div class="list-title">' +
+        "No mission memory yet" +
+        "</div>" +
+        '<div class="list-meta">' +
+        "The live machine has not recorded a mission memory." +
+        "</div>";
+
+      memoryList.appendChild(item);
+    }
+  }
+
+  async function fetchRobot() {
+    try {
+      setApiStatus(
+        "Connecting to Render backend...",
+        "loading"
+      );
+
+      const response =
+        await fetch(API_BASE + "/robot", {
+          method: "GET",
+          cache: "no-store"
+        });
+
+      if (!response.ok) {
+        throw new Error(
+          "API returned HTTP " + response.status
+        );
+      }
+
+      const data =
+        await response.json();
+
+      updateRobotData(data);
+
+      setApiStatus(
+        "Online — live machine data connected.",
+        "online"
+      );
+
+    } catch (error) {
+      console.error(
+        "ON1 Physical AI API error:",
+        error
+      );
+
+      setApiStatus(
+        "Unavailable — showing prototype fallback data.",
+        "offline"
+      );
+    }
+  }
+
+  async function runLiveMission() {
+    const confirmed =
+      window.confirm(
+        "Run a live software-simulated mission through the ON1 Physical AI backend?"
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    runMissionButton.disabled = true;
+
+    runMissionButton.textContent =
+      "Executing Mission...";
+
+    try {
+      setApiStatus(
+        "Executing mission through live backend...",
+        "loading"
+      );
+
+      const response =
+        await fetch(API_BASE + "/missions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({})
+        });
+
+      if (!response.ok) {
+        throw new Error(
+          "Mission request failed with HTTP " +
+          response.status
+        );
+      }
+
+      const result =
+        await response.json();
+
+      if (!result.robot) {
+        throw new Error(
+          "Mission response did not contain robot data."
+        );
+      }
+
+      updateRobotData(result);
+
+      const mission =
+        result.mission || {};
+
+      const validation =
+        mission.validation || {};
+
+      const passedChecks =
+        Array.isArray(validation.checks)
+          ? validation.checks.filter(
+              function(check) {
+                return (
+                  check &&
+                  (
+                    check.passed === true ||
+                    check.result === "PASS"
+                  )
+                );
+              }
+            ).length
+          : 6;
+
+      const totalChecks =
+        Array.isArray(validation.checks)
+          ? validation.checks.length
+          : 6;
+
+      const score =
+        mission.popwScore ??
+        mission.popwStyleScore ??
+        100;
+
+      document.getElementById(
+        "validationScore"
+      ).textContent =
+        safeNumber(score, 100) + "/100";
+
+      document.getElementById(
+        "validationChecks"
+      ).textContent =
+        passedChecks + "/" + totalChecks;
+
+      document.getElementById(
+        "validationResult"
+      ).textContent =
+        mission.verified === false
+          ? "NOT VERIFIED"
+          : "VERIFIED";
+
+      setApiStatus(
+        "Online — mission executed and machine state updated.",
+        "online"
+      );
+
+    } catch (error) {
+      console.error(
+        "ON1 Physical AI mission error:",
+        error
+      );
+
+      setApiStatus(
+        "Mission failed: " + error.message,
+        "offline"
+      );
+
+    } finally {
+      runMissionButton.disabled = false;
+
+      runMissionButton.textContent =
+        "Run Live Mission →";
+    }
+  }
+
+  refreshButton.addEventListener(
+    "click",
+    fetchRobot
+  );
+
+  runMissionButton.addEventListener(
+    "click",
+    runLiveMission
+  );
+
+  fetchRobot();
+</script></body>
 </html>
