@@ -11,6 +11,7 @@ Prototype backend for:
 - PoPW-style scoring
 - Machine reputation
 - Machine memory
+- Mission evidence persistence
 - Evidence artifact export
 - Local evidence fingerprint
 - Firebase / Firestore persistence
@@ -58,6 +59,9 @@ FIRESTORE_DEVICE_ID = "on1-unit-01"
 
 # Firestore machine memory subcollection
 FIRESTORE_MEMORY_COLLECTION = "memory"
+
+# Firestore mission evidence subcollection
+FIRESTORE_MISSION_COLLECTION = "missions"
 
 # Render Secret File
 FIREBASE_CREDENTIALS_PATH = (
@@ -152,7 +156,7 @@ def calculate_evidence_fingerprint(
 ) -> str:
     """
     Create a local SHA-256 fingerprint of the
-    exported backend evidence package.
+    evidence package.
 
     This is NOT a blockchain hash and does NOT
     represent Konnex verification.
@@ -162,6 +166,7 @@ def calculate_evidence_fingerprint(
         evidence_package,
         sort_keys=True,
         separators=(",", ":"),
+        default=str,
     ).encode("utf-8")
 
     return hashlib.sha256(
@@ -253,6 +258,10 @@ def save_device_state(
     )
 
 
+# ============================================================
+# FIRESTORE MACHINE MEMORY
+# ============================================================
+
 def load_memory() -> list[
     dict[str, Any]
 ]:
@@ -290,7 +299,7 @@ def save_memory(
     memory: dict[str, Any],
 ) -> None:
     """
-    Persist a machine memory record.
+    Persist a compact machine memory record.
     """
 
     memory_id = memory[
@@ -303,6 +312,191 @@ def save_memory(
         memory_id
     ).set(
         memory
+    )
+
+
+# ============================================================
+# FIRESTORE MISSION EVIDENCE
+# ============================================================
+
+def save_mission_evidence(
+    mission: dict[str, Any],
+) -> None:
+    """
+    Persist the complete verified mission/evidence package.
+
+    This is intentionally separate from the compact machine
+    memory record.
+
+    Machine memory answers:
+        "What has this machine done?"
+
+    Mission evidence answers:
+        "What exactly happened during this mission,
+         and how was the work validated?"
+
+    The mission document is stored at:
+
+        devices/{deviceId}/missions/{missionId}
+    """
+
+    mission_id = mission[
+        "missionId"
+    ]
+
+    mission_record = {
+        "recordType": "mission_evidence",
+
+        "project": PROJECT_NAME,
+
+        "prototypeVersion": (
+            PROTOTYPE_VERSION
+        ),
+
+        "missionId": mission_id,
+
+        "robotId": mission[
+            "robotId"
+        ],
+
+        "taskType": mission[
+            "taskType"
+        ],
+
+        "start": mission[
+            "start"
+        ],
+
+        "target": mission[
+            "target"
+        ],
+
+        "startedAt": mission[
+            "startedAt"
+        ],
+
+        "completedAt": mission[
+            "completedAt"
+        ],
+
+        "status": mission[
+            "status"
+        ],
+
+        "telemetry": mission[
+            "telemetry"
+        ],
+
+        "evidence": mission[
+            "evidence"
+        ],
+
+        "validatorResult": mission[
+            "validatorResult"
+        ],
+
+        "powpScore": mission[
+            "powpScore"
+        ],
+
+        "verification": {
+            "verified": mission[
+                "validatorResult"
+            ][
+                "verified"
+            ],
+
+            "validatorId": mission[
+                "validatorResult"
+            ][
+                "validatorId"
+            ],
+
+            "passedChecks": mission[
+                "validatorResult"
+            ][
+                "passedChecks"
+            ],
+
+            "totalChecks": mission[
+                "validatorResult"
+            ][
+                "totalChecks"
+            ],
+        },
+
+        "integration": {
+            "physicalHardware": False,
+
+            "konnexVerified": False,
+
+            "onChainVerified": False,
+        },
+
+        "persistedAt": utc_now(),
+    }
+
+    device_ref.collection(
+        FIRESTORE_MISSION_COLLECTION
+    ).document(
+        mission_id
+    ).set(
+        mission_record,
+        merge=True,
+    )
+
+
+def update_mission_evidence_artifact(
+    mission_id: str,
+    output_path: Path,
+    fingerprint: str,
+) -> None:
+    """
+    Add evidence-artifact and fingerprint metadata to
+    an existing persisted mission evidence record.
+
+    This is performed after the evidence package has been
+    exported and fingerprinted.
+    """
+
+    mission_ref = (
+        device_ref
+        .collection(
+            FIRESTORE_MISSION_COLLECTION
+        )
+        .document(
+            mission_id
+        )
+    )
+
+    mission_ref.set(
+        {
+            "evidenceArtifact": {
+                "path": str(
+                    output_path
+                ),
+
+                "sha256": fingerprint,
+
+                "algorithm": "SHA-256",
+
+                "scope": (
+                    "local backend "
+                    "evidence package"
+                ),
+            },
+
+            "integration": {
+                "physicalHardware": False,
+
+                "konnexVerified": False,
+
+                "onChainVerified": False,
+            },
+
+            "fingerprintedAt": utc_now(),
+        },
+        merge=True,
     )
 
 
@@ -664,7 +858,16 @@ class MissionEngine:
             verified
         )
 
+        # Persist compact machine memory.
         self.robot.remember(
+            mission
+        )
+
+        # Persist the complete mission evidence package.
+        #
+        # This is separate from machine memory so the
+        # complete evidence trail remains available.
+        save_mission_evidence(
             mission
         )
 
@@ -1003,9 +1206,31 @@ def export_evidence(
             result,
             file,
             indent=2,
+            default=str,
         )
 
         file.write("\n")
+
+    # Update the already-persisted mission evidence record
+    # with its exported artifact and fingerprint.
+    mission = result.get(
+        "mission",
+        {}
+    )
+
+    mission_id = mission.get(
+        "missionId"
+    )
+
+    if mission_id:
+
+        update_mission_evidence_artifact(
+            mission_id=mission_id,
+
+            output_path=OUTPUT_FILE,
+
+            fingerprint=fingerprint,
+        )
 
     return (
         OUTPUT_FILE,
@@ -1165,6 +1390,17 @@ def print_demo(
     print(
         f"  Records: "
         f"{len(result['robot']['memory'])}"
+    )
+
+    print()
+
+    print("MISSION EVIDENCE")
+
+    print(
+        "  Firestore: "
+        f"devices/{FIRESTORE_DEVICE_ID}/"
+        f"{FIRESTORE_MISSION_COLLECTION}/"
+        f"{mission['missionId']}"
     )
 
     print()
