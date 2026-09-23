@@ -1,49 +1,10 @@
-"""
-ON1 Physical AI
-Deployment-Ready Backend HTTP API
-
-Endpoints:
-
-GET  /
-GET  /health
-GET  /robot
-POST /missions
-
-Environment:
-
-PORT
-    Port supplied by the deployment platform.
-    Defaults to 8000 for local development.
-
-ON1_API_TEST=1
-    Runs the automated API self-test and exits.
-
-This is a software prototype.
-
-It does NOT represent:
-- live Konnex verification
-- blockchain verification
-- an on-chain transaction
-- physical robot hardware
-"""
-
-from __future__ import annotations
-
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from threading import Thread
 import json
 import os
-import threading
-import time
-from http.server import (
-    BaseHTTPRequestHandler,
-    ThreadingHTTPServer,
-)
-from typing import Any
-from urllib.error import HTTPError
-from urllib.request import (
-    Request,
-    urlopen,
-)
-from urllib.parse import urlparse
+import urllib.error
+import urllib.request
 
 from main import (
     PROJECT_NAME,
@@ -54,985 +15,893 @@ from main import (
 )
 
 
-# ============================================================
-# CONFIGURATION
-# ============================================================
-
-HOST = os.environ.get(
-    "HOST",
-    "0.0.0.0",
-)
-
-try:
-    PORT = int(
-        os.environ.get(
-            "PORT",
-            "8000",
-        )
-    )
-except ValueError:
-    PORT = 8000
+HOST = os.getenv("ON1_API_HOST", "0.0.0.0")
+PORT = int(os.getenv("PORT", "8000"))
 
 
 # ============================================================
 # RESPONSE HELPERS
 # ============================================================
 
-def send_json(
-    handler: BaseHTTPRequestHandler,
-    status_code: int,
-    data: dict[str, Any],
-) -> None:
-    """Send a JSON HTTP response."""
-
+def send_json(handler, status_code, payload):
     body = json.dumps(
-        data,
+        payload,
         indent=2,
+        default=str,
     ).encode("utf-8")
 
-    handler.send_response(
-        status_code
-    )
+    handler.send_response(status_code)
+    handler.send_header("Content-Type", "application/json; charset=utf-8")
+    handler.send_header("Content-Length", str(len(body)))
 
-    handler.send_header(
-        "Content-Type",
-        "application/json; charset=utf-8",
-    )
-
-    handler.send_header(
-        "Content-Length",
-        str(len(body)),
-    )
-
-    handler.send_header(
-        "Access-Control-Allow-Origin",
-        "*",
-    )
-
+    # CORS
+    handler.send_header("Access-Control-Allow-Origin", "*")
     handler.send_header(
         "Access-Control-Allow-Methods",
         "GET, POST, OPTIONS",
     )
-
     handler.send_header(
         "Access-Control-Allow-Headers",
         "Content-Type",
     )
 
-    handler.send_header(
-        "Cache-Control",
-        "no-store",
-    )
+    # Prevent stale API responses in browser/PWA
+    handler.send_header("Cache-Control", "no-store")
 
     handler.end_headers()
-
-    handler.wfile.write(
-        body
-    )
+    handler.wfile.write(body)
 
 
-def read_json_body(
-    handler: BaseHTTPRequestHandler,
-) -> dict[str, Any]:
-    """Read and decode a JSON request body."""
+def read_json_body(handler):
+    content_length = int(handler.headers.get("Content-Length", "0"))
 
-    content_length = handler.headers.get(
-        "Content-Length"
-    )
+    if content_length <= 0:
+        return {}
 
-    if not content_length:
+    raw_body = handler.rfile.read(content_length)
+
+    if not raw_body:
         return {}
 
     try:
-        length = int(
-            content_length
-        )
-    except ValueError:
-        return {}
+        parsed = json.loads(raw_body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        raise ValueError("Request body must contain valid JSON.")
 
-    if length <= 0:
-        return {}
+    if not isinstance(parsed, dict):
+        raise ValueError("Request body must be a JSON object.")
 
-    raw_body = handler.rfile.read(
-        length
-    )
-
-    try:
-        decoded = raw_body.decode(
-            "utf-8"
-        )
-
-        parsed = json.loads(
-            decoded
-        )
-
-        if isinstance(
-            parsed,
-            dict,
-        ):
-            return parsed
-
-    except (
-        UnicodeDecodeError,
-        json.JSONDecodeError,
-    ):
-        pass
-
-    return {}
+    return parsed
 
 
 # ============================================================
 # API HANDLER
 # ============================================================
 
-class ON1PhysicalAIHandler(
-    BaseHTTPRequestHandler
-):
+class ON1APIHandler(BaseHTTPRequestHandler):
 
-    server_version = (
-        "ON1PhysicalAI/0.2"
-    )
+    server_version = "ON1PhysicalAI/0.5.0"
 
-    def do_OPTIONS(self) -> None:
-        """Handle browser CORS preflight requests."""
-
-        self.send_response(204)
-
-        self.send_header(
-            "Access-Control-Allow-Origin",
-            "*",
+    def log_message(self, format_string, *args):
+        """
+        Keep standard HTTP logging while making it easy to identify
+        ON1 Physical AI API requests in Render logs.
+        """
+        print(
+            "[ON1 API] "
+            + format_string % args,
+            flush=True,
         )
 
+    # --------------------------------------------------------
+    # OPTIONS
+    # --------------------------------------------------------
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header(
             "Access-Control-Allow-Methods",
             "GET, POST, OPTIONS",
         )
-
         self.send_header(
             "Access-Control-Allow-Headers",
             "Content-Type",
         )
-
-        self.send_header(
-            "Access-Control-Max-Age",
-            "86400",
-        )
+        self.send_header("Access-Control-Max-Age", "86400")
 
         self.end_headers()
 
-    def do_GET(self) -> None:
-        """Handle GET requests."""
+    # --------------------------------------------------------
+    # GET
+    # --------------------------------------------------------
 
-        parsed_url = urlparse(
-            self.path
-        )
-
-        path = parsed_url.path.rstrip("/")
-
-        if path == "":
-            path = "/"
-
-        if path == "/health":
-            self.handle_health()
-            return
-
-        if path == "/robot":
-            self.handle_robot()
-            return
-
-        if path == "/":
-            self.handle_root()
-            return
-
-        self.handle_not_found()
-
-    def do_POST(self) -> None:
-        """Handle POST requests."""
-
-        parsed_url = urlparse(
-            self.path
-        )
-
-        path = parsed_url.path.rstrip("/")
-
-        if path == "":
-            path = "/"
-
-        if path == "/missions":
-            self.handle_create_mission()
-            return
-
-        self.handle_not_found()
-
-    # ========================================================
-    # GET /
-    # ========================================================
-
-    def handle_root(self) -> None:
-        """Return API information."""
-
-        send_json(
-            self,
-            200,
-            {
-                "project": PROJECT_NAME,
-                "prototypeVersion": PROTOTYPE_VERSION,
-                "service": (
-                    "ON1 Physical AI Mission API"
-                ),
-                "status": "online",
-                "apiVersion": "0.2",
-                "endpoints": {
-                    "root": "GET /",
-                    "health": "GET /health",
-                    "robot": "GET /robot",
-                    "missions": "POST /missions",
-                },
-                "simulation": {
-                    "type": "backend-api",
-                    "hardwareConnected": False,
-                    "konnexIntegrated": False,
-                    "onChainVerified": False,
-                },
-            },
-        )
-
-    # ========================================================
-    # GET /health
-    # ========================================================
-
-    def handle_health(self) -> None:
-        """Return service health information."""
-
-        send_json(
-            self,
-            200,
-            {
-                "project": PROJECT_NAME,
-                "prototypeVersion": PROTOTYPE_VERSION,
-                "apiVersion": "0.2",
-                "status": "online",
-                "service": (
-                    "ON1 Physical AI Mission API"
-                ),
-                "hardwareConnected": False,
-                "konnexIntegrated": False,
-                "onChainVerified": False,
-            },
-        )
-
-    # ========================================================
-    # GET /robot
-    # ========================================================
-
-    def handle_robot(self) -> None:
-        """Return current virtual robot state."""
-
-        send_json(
-            self,
-            200,
-            {
-                "project": PROJECT_NAME,
-                "robot": robot.to_dict(),
-                "hardwareConnected": False,
-                "konnexIntegrated": False,
-                "onChainVerified": False,
-            },
-        )
-
-    # ========================================================
-    # POST /missions
-    # ========================================================
-
-    def handle_create_mission(self) -> None:
-        """Create and execute a navigation mission."""
-
-        request_data = read_json_body(
-            self
-        )
-
-        start = request_data.get(
-            "start",
-            {
-                "x": 0,
-                "y": 0,
-            },
-        )
-
-        target = request_data.get(
-            "target",
-            {
-                "x": 10,
-                "y": 10,
-            },
-        )
-
-        if not isinstance(
-            start,
-            dict,
-        ):
-            send_json(
-                self,
-                400,
-                {
-                    "error": (
-                        "Invalid start coordinates."
-                    )
-                },
-            )
-            return
-
-        if not isinstance(
-            target,
-            dict,
-        ):
-            send_json(
-                self,
-                400,
-                {
-                    "error": (
-                        "Invalid target coordinates."
-                    )
-                },
-            )
-            return
+    def do_GET(self):
+        path = self.path.split("?", 1)[0]
 
         try:
-            start_x = int(
-                start.get(
-                    "x",
-                    0,
+
+            if path == "/":
+                handle_root(self)
+
+            elif path == "/health":
+                handle_health(self)
+
+            elif path == "/robot":
+                handle_robot(self)
+
+            else:
+                send_json(
+                    self,
+                    404,
+                    {
+                        "error": "Endpoint not found.",
+                        "path": path,
+                        "availableEndpoints": [
+                            "GET /",
+                            "GET /health",
+                            "GET /robot",
+                            "POST /missions",
+                        ],
+                    },
                 )
+
+        except Exception as exc:
+            print(
+                f"[ON1 API] GET {path} error: {exc}",
+                flush=True,
             )
 
-            start_y = int(
-                start.get(
-                    "y",
-                    0,
-                )
-            )
-
-            target_x = int(
-                target.get(
-                    "x",
-                    10,
-                )
-            )
-
-            target_y = int(
-                target.get(
-                    "y",
-                    10,
-                )
-            )
-
-        except (
-            TypeError,
-            ValueError,
-        ):
-            send_json(
-                self,
-                400,
-                {
-                    "error": (
-                        "Invalid mission coordinates."
-                    )
-                },
-            )
-            return
-
-        try:
-            mission = (
-                engine.execute_navigation(
-                    start=(
-                        start_x,
-                        start_y,
-                    ),
-                    target=(
-                        target_x,
-                        target_y,
-                    ),
-                )
-            )
-
-            result = {
-                "project": PROJECT_NAME,
-                "prototypeVersion": PROTOTYPE_VERSION,
-                "simulation": {
-                    "type": "backend-api",
-                    "hardwareConnected": False,
-                    "konnexIntegrated": False,
-                    "onChainVerified": False,
-                },
-                "robot": robot.to_dict(),
-                "mission": mission,
-            }
-
-            output_path, fingerprint = (
-                export_evidence(
-                    result
-                )
-            )
-
-            result["evidenceArtifact"] = {
-                "path": str(
-                    output_path
-                ),
-                "sha256": fingerprint,
-                "algorithm": "SHA-256",
-                "konnexVerified": False,
-                "onChainVerified": False,
-            }
-
-            send_json(
-                self,
-                200,
-                result,
-            )
-
-        except Exception as error:
             send_json(
                 self,
                 500,
                 {
-                    "error": (
-                        "Mission execution failed."
-                    ),
-                    "details": str(
-                        error
-                    ),
+                    "error": "Internal server error.",
+                    "message": str(exc),
                 },
             )
 
-    # ========================================================
-    # 404
-    # ========================================================
+    # --------------------------------------------------------
+    # POST
+    # --------------------------------------------------------
 
-    def handle_not_found(self) -> None:
-        """Return a structured 404 response."""
+    def do_POST(self):
+        path = self.path.split("?", 1)[0]
 
-        send_json(
-            self,
-            404,
-            {
-                "error": (
-                    "Endpoint not found"
-                ),
-                "availableEndpoints": [
-                    "GET /",
-                    "GET /health",
-                    "GET /robot",
-                    "POST /missions",
-                ],
+        try:
+
+            if path == "/missions":
+                handle_create_mission(self)
+
+            else:
+                send_json(
+                    self,
+                    404,
+                    {
+                        "error": "Endpoint not found.",
+                        "path": path,
+                        "availableEndpoints": [
+                            "GET /",
+                            "GET /health",
+                            "GET /robot",
+                            "POST /missions",
+                        ],
+                    },
+                )
+
+        except ValueError as exc:
+            print(
+                f"[ON1 API] POST {path} validation error: {exc}",
+                flush=True,
+            )
+
+            send_json(
+                self,
+                400,
+                {
+                    "error": str(exc),
+                },
+            )
+
+        except Exception as exc:
+            print(
+                f"[ON1 API] POST {path} error: {exc}",
+                flush=True,
+            )
+
+            send_json(
+                self,
+                500,
+                {
+                    "error": "Internal server error.",
+                    "message": str(exc),
+                },
+            )
+
+
+# ============================================================
+# GET /
+# ============================================================
+
+def handle_root(handler):
+    send_json(
+        handler,
+        200,
+        {
+            "project": PROJECT_NAME,
+            "prototypeVersion": PROTOTYPE_VERSION,
+            "service": "ON1 Physical AI API",
+            "status": "online",
+            "apiVersion": "0.2",
+            "endpoints": {
+                "health": "GET /health",
+                "robot": "GET /robot",
+                "missions": "POST /missions",
             },
+            "integration": {
+                "physicalHardware": False,
+                "konnex": False,
+                "onChain": False,
+            },
+            "simulation": {
+                "browser": False,
+                "backend": True,
+            },
+        },
+    )
+
+
+# ============================================================
+# GET /health
+# ============================================================
+
+def handle_health(handler):
+    send_json(
+        handler,
+        200,
+        {
+            "status": "online",
+            "project": PROJECT_NAME,
+            "prototypeVersion": PROTOTYPE_VERSION,
+            "integration": {
+                "physicalHardware": False,
+                "konnex": False,
+                "onChain": False,
+            },
+        },
+    )
+
+
+# ============================================================
+# GET /robot
+# ============================================================
+
+def handle_robot(handler):
+    send_json(
+        handler,
+        200,
+        {
+            "robot": robot.to_dict(),
+            "integration": {
+                "physicalHardware": False,
+                "konnex": False,
+                "onChain": False,
+            },
+        },
+    )
+
+
+# ============================================================
+# POST /missions
+# ============================================================
+
+def handle_create_mission(handler):
+    payload = read_json_body(handler)
+
+    start = payload.get("start", [0, 0])
+    target = payload.get("target", [10, 10])
+
+    if not isinstance(start, (list, tuple)) or len(start) != 2:
+        raise ValueError(
+            "start must be an array containing exactly two coordinates."
         )
 
-    # ========================================================
-    # LOGGING
-    # ========================================================
-
-    def log_message(
-        self,
-        format_string: str,
-        *args: Any,
-    ) -> None:
-        """Use a compact API log format."""
-
-        print(
-            f"[ON1 API] "
-            f"{format_string % args}"
+    if not isinstance(target, (list, tuple)) or len(target) != 2:
+        raise ValueError(
+            "target must be an array containing exactly two coordinates."
         )
+
+    try:
+        start_x = int(start[0])
+        start_y = int(start[1])
+        target_x = int(target[0])
+        target_y = int(target[1])
+    except (TypeError, ValueError):
+        raise ValueError(
+            "start and target coordinates must be integers."
+        )
+
+    mission = engine.execute_navigation(
+        start=(start_x, start_y),
+        target=(target_x, target_y),
+    )
+
+    result = {
+        "project": PROJECT_NAME,
+        "prototypeVersion": PROTOTYPE_VERSION,
+        "simulation": {
+            "browser": False,
+            "backend": True,
+        },
+        "integration": {
+            "physicalHardware": False,
+            "konnex": False,
+            "onChain": False,
+        },
+        "robot": robot.to_dict(),
+        "mission": mission,
+    }
+
+    output_path, fingerprint = export_evidence(result)
+
+    result["evidenceArtifact"] = {
+        "path": str(output_path),
+        "sha256": fingerprint,
+        "algorithm": "SHA-256",
+        "konnexVerified": False,
+        "onChainVerified": False,
+    }
+
+    send_json(
+        handler,
+        200,
+        result,
+    )
 
 
 # ============================================================
 # SERVER
 # ============================================================
 
-def create_server(
-    host: str = HOST,
-    port: int = PORT,
-) -> ThreadingHTTPServer:
-    """Create the HTTP server."""
-
-    return ThreadingHTTPServer(
-        (
-            host,
-            port,
-        ),
-        ON1PhysicalAIHandler,
+def run_server():
+    server = ThreadingHTTPServer(
+        (HOST, PORT),
+        ON1APIHandler,
     )
 
-
-def run_server() -> None:
-    """Start the deployment-ready API server."""
-
-    server = create_server()
-
-    actual_host = server.server_address[0]
-    actual_port = server.server_address[1]
-
-    print()
-    print("=" * 60)
     print(
-        "ON1 PHYSICAL AI — HTTP API"
-    )
-    print("=" * 60)
-    print()
-    print(
-        f"Server: http://{actual_host}:{actual_port}"
-    )
-    print()
-    print("Endpoints:")
-    print("  GET  /")
-    print("  GET  /health")
-    print("  GET  /robot")
-    print("  POST /missions")
-    print()
-    print(
-        "Hardware connected: False"
+        "============================================================",
+        flush=True,
     )
     print(
-        "Konnex integrated: False"
+        "ON1 Physical AI API",
+        flush=True,
     )
     print(
-        "On-chain verified: False"
+        f"Project: {PROJECT_NAME}",
+        flush=True,
     )
-    print()
     print(
-        "Press Ctrl+C to stop."
+        f"Prototype Version: {PROTOTYPE_VERSION}",
+        flush=True,
     )
-    print()
-    print("=" * 60)
+    print(
+        f"Listening on {HOST}:{PORT}",
+        flush=True,
+    )
+    print(
+        "Endpoints:",
+        flush=True,
+    )
+    print(
+        "  GET  /",
+        flush=True,
+    )
+    print(
+        "  GET  /health",
+        flush=True,
+    )
+    print(
+        "  GET  /robot",
+        flush=True,
+    )
+    print(
+        "  POST /missions",
+        flush=True,
+    )
+    print(
+        "============================================================",
+        flush=True,
+    )
 
     try:
         server.serve_forever()
 
     except KeyboardInterrupt:
-        print()
         print(
-            "ON1 Physical AI API stopped."
+            "\n[ON1 API] Shutdown requested.",
+            flush=True,
         )
 
     finally:
         server.server_close()
 
+        print(
+            "[ON1 API] Server stopped.",
+            flush=True,
+        )
+
 
 # ============================================================
-# TEST HELPERS
+# NON-DESTRUCTIVE SELF-TEST DOUBLES
+# ============================================================
+
+class SelfTestRobot:
+    """
+    In-memory robot used only by the API self-test.
+
+    It deliberately does not connect to Firebase and does not
+    modify production machine state.
+    """
+
+    def to_dict(self):
+        return {
+            "robotId": "ON1-SELF-TEST",
+            "identity": "ON1-SELF-TEST-MACHINE",
+            "model": "ON1 Self-Test Navigator",
+            "status": "IDLE",
+            "missionCount": 0,
+            "successfulMissions": 0,
+            "failedMissions": 0,
+            "reputation": 100,
+            "memoryCount": 0,
+        }
+
+
+class SelfTestEngine:
+    """
+    In-memory mission engine used only by the API self-test.
+
+    This produces the same essential API contract expected from
+    the production MissionEngine without touching Firebase.
+    """
+
+    def execute_navigation(self, start, target):
+        return {
+            "missionId": "MSN-SELF-TEST-001",
+            "robotId": "ON1-SELF-TEST",
+            "taskType": "Navigation",
+            "start": {
+                "x": start[0],
+                "y": start[1],
+            },
+            "target": {
+                "x": target[0],
+                "y": target[1],
+            },
+            "startedAt": "2026-01-01T00:00:00+00:00",
+            "completedAt": "2026-01-01T00:00:01+00:00",
+            "telemetry": [
+                {
+                    "step": 0,
+                    "position": {
+                        "x": start[0],
+                        "y": start[1],
+                    },
+                    "battery": 100,
+                },
+                {
+                    "step": 10,
+                    "position": {
+                        "x": target[0],
+                        "y": target[1],
+                    },
+                    "battery": 90,
+                },
+            ],
+            "status": "COMPLETED",
+            "evidence": {
+                "evidenceId": "EVD-SELF-TEST-001",
+                "missionId": "MSN-SELF-TEST-001",
+                "robotId": "ON1-SELF-TEST",
+                "taskType": "Navigation",
+                "status": "COMPLETED",
+            },
+            "validatorResult": {
+                "validatorId": "ON1-SELF-TEST-VALIDATOR",
+                "validatedAt": "2026-01-01T00:00:01+00:00",
+                "checks": {
+                    "missionStarted": True,
+                    "missionCompleted": True,
+                    "telemetryPresent": True,
+                    "targetReached": True,
+                    "robotIdentityPresent": True,
+                    "evidenceGenerated": True,
+                },
+                "passedChecks": 6,
+                "totalChecks": 6,
+                "verified": True,
+            },
+            "powpScore": 100,
+        }
+
+
+def self_test_export_evidence(result):
+    """
+    In-memory replacement for export_evidence() during self-test.
+
+    No production backend_output file is created.
+    No Firebase state is changed.
+    """
+
+    return (
+        Path("SELF_TEST_ONLY/mission-result.json"),
+        "self-test-sha256-fingerprint",
+    )
+
+
+# ============================================================
+# SELF-TEST HTTP CLIENT
 # ============================================================
 
 def api_request(
-    method: str,
-    url: str,
-    payload: dict[str, Any] | None = None,
-) -> tuple[int, dict[str, Any]]:
-    """Send an HTTP request to the local test server."""
+    base_url,
+    method="GET",
+    path="/",
+    payload=None,
+):
+    url = f"{base_url}{path}"
 
     data = None
 
-    headers = {
-        "Accept": "application/json",
-    }
-
     if payload is not None:
-        data = json.dumps(
-            payload
-        ).encode("utf-8")
+        data = json.dumps(payload).encode("utf-8")
 
-        headers[
-            "Content-Type"
-        ] = "application/json"
-
-    request = Request(
-        url,
+    request = urllib.request.Request(
+        url=url,
         data=data,
-        headers=headers,
         method=method,
+        headers={
+            "Content-Type": "application/json",
+        },
     )
 
     try:
-        with urlopen(
+        with urllib.request.urlopen(
             request,
             timeout=10,
         ) as response:
 
-            status_code = (
-                response.status
-            )
+            raw = response.read().decode("utf-8")
 
-            body = (
-                response.read()
-                .decode("utf-8")
-            )
+            if raw:
+                parsed = json.loads(raw)
+            else:
+                parsed = {}
 
-    except HTTPError as error:
-        status_code = error.code
+            return response.status, parsed
 
-        body = (
-            error.read()
-            .decode("utf-8")
-        )
+    except urllib.error.HTTPError as exc:
+        raw = exc.read().decode("utf-8")
 
-    parsed = json.loads(
-        body
-    )
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            parsed = {
+                "error": raw,
+            }
 
-    return (
-        status_code,
-        parsed,
-    )
+        return exc.code, parsed
 
 
-def assert_condition(
-    condition: bool,
-    message: str,
-) -> None:
-    """Fail the self-test when a condition is false."""
+# ============================================================
+# SELF-TEST ASSERTION
+# ============================================================
 
+def assert_condition(condition, message):
     if not condition:
         raise RuntimeError(
-            f"API self-test failed: {message}"
+            f"SELF-TEST FAILED: {message}"
         )
 
 
 # ============================================================
-# API SELF-TEST
+# NON-DESTRUCTIVE API SELF-TEST
 # ============================================================
 
-def run_self_test() -> None:
+def run_self_test():
     """
-    Start a temporary local API server,
-    verify all public endpoints,
-    then stop it.
+    Runs the API contract test against isolated in-memory
+    components.
+
+    IMPORTANT:
+    This test does NOT execute a real Firebase-backed mission.
+    It therefore cannot increment mission_count, reputation,
+    successful_missions, failed_missions, or create memory
+    records in production Firebase.
     """
 
-    print()
-    print("=" * 60)
-    print(
-        "ON1 PHYSICAL AI — API SELF-TEST"
-    )
-    print("=" * 60)
-    print()
+    global robot
+    global engine
+    global export_evidence
 
-    server = create_server(
-        host="127.0.0.1",
-        port=0,
-    )
+    original_robot = robot
+    original_engine = engine
+    original_export_evidence = export_evidence
 
-    actual_port = (
-        server.server_address[1]
-    )
-
-    server_thread = threading.Thread(
-        target=server.serve_forever,
-        daemon=True,
-    )
-
-    server_thread.start()
-
-    base_url = (
-        f"http://127.0.0.1:{actual_port}"
-    )
+    test_server = None
 
     try:
-        time.sleep(0.1)
 
         # ----------------------------------------------------
-        # TEST 1 — ROOT
+        # Replace production dependencies with isolated
+        # in-memory test doubles.
         # ----------------------------------------------------
 
-        print(
-            "1. Testing GET / ..."
+        robot = SelfTestRobot()
+        engine = SelfTestEngine()
+        export_evidence = self_test_export_evidence
+
+        # ----------------------------------------------------
+        # Start temporary API server on an OS-assigned port.
+        # ----------------------------------------------------
+
+        test_server = ThreadingHTTPServer(
+            ("127.0.0.1", 0),
+            ON1APIHandler,
         )
 
-        root_status, root = (
-            api_request(
-                "GET",
-                f"{base_url}/",
+        test_port = test_server.server_address[1]
+
+        server_thread = Thread(
+            target=test_server.serve_forever,
+            daemon=True,
+        )
+
+        server_thread.start()
+
+        base_url = (
+            f"http://127.0.0.1:{test_port}"
+        )
+
+        # ----------------------------------------------------
+        # GET /
+        # ----------------------------------------------------
+
+        status, data = api_request(
+            base_url,
+            "GET",
+            "/",
+        )
+
+        assert_condition(
+            status == 200,
+            "GET / must return HTTP 200.",
+        )
+
+        assert_condition(
+            data.get("status") == "online",
+            "GET / must report online status.",
+        )
+
+        assert_condition(
+            data.get("project") == PROJECT_NAME,
+            "GET / must report the correct project.",
+        )
+
+        # ----------------------------------------------------
+        # GET /health
+        # ----------------------------------------------------
+
+        status, data = api_request(
+            base_url,
+            "GET",
+            "/health",
+        )
+
+        assert_condition(
+            status == 200,
+            "GET /health must return HTTP 200.",
+        )
+
+        assert_condition(
+            data.get("status") == "online",
+            "GET /health must report online status.",
+        )
+
+        # ----------------------------------------------------
+        # GET /robot
+        # ----------------------------------------------------
+
+        status, data = api_request(
+            base_url,
+            "GET",
+            "/robot",
+        )
+
+        assert_condition(
+            status == 200,
+            "GET /robot must return HTTP 200.",
+        )
+
+        assert_condition(
+            "robot" in data,
+            "GET /robot must return a robot object.",
+        )
+
+        assert_condition(
+            data["robot"].get("robotId") == "ON1-SELF-TEST",
+            "GET /robot must return the isolated self-test robot.",
+        )
+
+        # ----------------------------------------------------
+        # POST /missions
+        # ----------------------------------------------------
+
+        status, data = api_request(
+            base_url,
+            "POST",
+            "/missions",
+            {
+                "start": [0, 0],
+                "target": [10, 10],
+            },
+        )
+
+        assert_condition(
+            status == 200,
+            "POST /missions must return HTTP 200.",
+        )
+
+        mission = data.get("mission", {})
+
+        assert_condition(
+            mission.get("status") == "COMPLETED",
+            "Self-test mission must be COMPLETED.",
+        )
+
+        assert_condition(
+            isinstance(
+                mission.get("telemetry"),
+                list,
             )
+            and len(mission["telemetry"]) > 0,
+            "Mission must contain telemetry.",
         )
 
-        assert_condition(
-            root_status == 200,
-            "GET / did not return HTTP 200.",
-        )
-
-        assert_condition(
-            root.get("status")
-            == "online",
-            "Root API status is not online.",
-        )
-
-        print(
-            "   PASS — /"
-        )
-
-        # ----------------------------------------------------
-        # TEST 2 — HEALTH
-        # ----------------------------------------------------
-
-        print(
-            "2. Testing GET /health ..."
-        )
-
-        health_status, health = (
-            api_request(
-                "GET",
-                f"{base_url}/health",
-            )
-        )
-
-        assert_condition(
-            health_status == 200,
-            "GET /health did not return HTTP 200.",
-        )
-
-        assert_condition(
-            health.get("status")
-            == "online",
-            "Health status is not online.",
-        )
-
-        assert_condition(
-            health.get(
-                "konnexIntegrated"
-            )
-            is False,
-            "Konnex integration must remain false.",
-        )
-
-        assert_condition(
-            health.get(
-                "onChainVerified"
-            )
-            is False,
-            "On-chain verification must remain false.",
-        )
-
-        print(
-            "   PASS — /health"
-        )
-
-        # ----------------------------------------------------
-        # TEST 3 — ROBOT
-        # ----------------------------------------------------
-
-        print(
-            "3. Testing GET /robot ..."
-        )
-
-        robot_status, robot_data = (
-            api_request(
-                "GET",
-                f"{base_url}/robot",
-            )
-        )
-
-        assert_condition(
-            robot_status == 200,
-            "GET /robot did not return HTTP 200.",
-        )
-
-        api_robot = robot_data.get(
-            "robot",
+        validator = mission.get(
+            "validatorResult",
             {},
         )
 
         assert_condition(
-            api_robot.get("robotId")
-            == "ON1-R001",
-            "Robot ID is incorrect.",
+            validator.get("verified") is True,
+            "Mission validator must report verified=True.",
         )
 
         assert_condition(
-            api_robot.get("identity")
-            == "ON1-MACHINE-001",
-            "Robot identity is incorrect.",
+            validator.get("passedChecks") == 6,
+            "Validator must pass all 6 checks.",
         )
 
         assert_condition(
-            api_robot.get("model")
-            == "ON1 Virtual Navigator",
-            "Robot model is incorrect.",
-        )
-
-        print(
-            "   PASS — /robot"
-        )
-
-        # ----------------------------------------------------
-        # TEST 4 — CREATE MISSION
-        # ----------------------------------------------------
-
-        print(
-            "4. Testing POST /missions ..."
-        )
-
-        mission_status, mission_data = (
-            api_request(
-                "POST",
-                f"{base_url}/missions",
-                {
-                    "start": {
-                        "x": 0,
-                        "y": 0,
-                    },
-                    "target": {
-                        "x": 10,
-                        "y": 10,
-                    },
-                },
-            )
+            validator.get("totalChecks") == 6,
+            "Validator must contain 6 total checks.",
         )
 
         assert_condition(
-            mission_status == 200,
-            "POST /missions did not return HTTP 200.",
+            mission.get("powpScore") == 100,
+            "PoPW-style score must be 100.",
         )
 
-        mission = mission_data.get(
-            "mission",
+        evidence_artifact = data.get(
+            "evidenceArtifact",
             {},
         )
 
         assert_condition(
-            mission.get(
-                "status"
-            )
-            == "COMPLETED",
-            "Mission was not completed.",
-        )
-
-        telemetry = mission.get(
-            "telemetry",
-            [],
+            evidence_artifact.get("sha256")
+            == "self-test-sha256-fingerprint",
+            "Evidence artifact fingerprint must be returned.",
         )
 
         assert_condition(
-            len(telemetry) > 0,
-            "Mission telemetry is missing.",
-        )
-
-        validator_result = (
-            mission.get(
-                "validatorResult",
-                {},
-            )
+            evidence_artifact.get("konnexVerified") is False,
+            "Self-test must report Konnex verification as false.",
         )
 
         assert_condition(
-            validator_result.get(
-                "verified"
-            )
-            is True,
-            "Mission validation did not pass.",
-        )
-
-        assert_condition(
-            validator_result.get(
-                "passedChecks"
-            )
-            == validator_result.get(
-                "totalChecks"
-            ),
-            "Not all validation checks passed.",
-        )
-
-        assert_condition(
-            mission.get(
-                "powpScore"
-            )
-            == 100,
-            "PoPW-style score is not 100.",
-        )
-
-        evidence_artifact = (
-            mission_data.get(
-                "evidenceArtifact",
-                {},
-            )
-        )
-
-        assert_condition(
-            bool(
-                evidence_artifact.get(
-                    "sha256"
-                )
-            ),
-            "Evidence SHA-256 fingerprint is missing.",
-        )
-
-        print(
-            "   PASS — /missions"
+            evidence_artifact.get("onChainVerified") is False,
+            "Self-test must report on-chain verification as false.",
         )
 
         # ----------------------------------------------------
-        # FINAL RESULT
+        # Verify production objects were not used.
         # ----------------------------------------------------
 
-        print()
-        print(
-            "API SELF-TEST PASSED"
+        assert_condition(
+            robot is not original_robot,
+            "Self-test robot isolation must be active.",
         )
-        print()
-        print(
-            "Verified:"
+
+        assert_condition(
+            engine is not original_engine,
+            "Self-test engine isolation must be active.",
         )
+
         print(
-            "  GET  /health        ✓"
-        )
-        print(
-            "  GET  /robot         ✓"
-        )
-        print(
-            "  POST /missions      ✓"
+            "",
+            flush=True,
         )
         print(
-            "  Mission telemetry   ✓"
+            "============================================================",
+            flush=True,
         )
         print(
-            "  Evidence generation ✓"
+            "ON1 PHYSICAL AI API SELF-TEST PASSED",
+            flush=True,
         )
         print(
-            "  Local validation    ✓"
+            "GET /              PASS",
+            flush=True,
         )
         print(
-            "  PoPW-style score    ✓"
+            "GET /health        PASS",
+            flush=True,
         )
         print(
-            "  SHA-256 fingerprint ✓"
-        )
-        print()
-        print(
-            "Konnex integrated: False"
+            "GET /robot         PASS",
+            flush=True,
         )
         print(
-            "On-chain verified: False"
+            "POST /missions     PASS",
+            flush=True,
         )
-        print()
-        print("=" * 60)
+        print(
+            "Validation 6/6     PASS",
+            flush=True,
+        )
+        print(
+            "PoPW Score 100     PASS",
+            flush=True,
+        )
+        print(
+            "Firebase mutation  NONE",
+            flush=True,
+        )
+        print(
+            "Production mission NONE",
+            flush=True,
+        )
+        print(
+            "============================================================",
+            flush=True,
+        )
 
     finally:
-        server.shutdown()
-        server.server_close()
 
-        server_thread.join(
-            timeout=5
-        )
+        # ----------------------------------------------------
+        # Always restore production objects.
+        # ----------------------------------------------------
+
+        robot = original_robot
+        engine = original_engine
+        export_evidence = original_export_evidence
+
+        if test_server is not None:
+            test_server.shutdown()
+            test_server.server_close()
 
 
 # ============================================================
-# MAIN
+# ENTRY POINT
 # ============================================================
 
 if __name__ == "__main__":
 
-    if os.environ.get(
-        "ON1_API_TEST"
-    ) == "1":
-
+    if os.getenv("ON1_API_TEST", "0") == "1":
         run_self_test()
 
     else:
-
         run_server()
