@@ -77,6 +77,23 @@ OUTPUT_FILE = OUTPUT_DIRECTORY / "mission-result.json"
 KONNEX_ADAPTER_VERSION = "0.1.0"
 KONNEX_ADAPTER_STATUS = "READY_FOR_KONNEX_REVIEW"
 
+# Evidence fingerprint scope.
+#
+# IMPORTANT:
+# The fingerprint intentionally covers the canonical ON1
+# mission evidence core only.
+#
+# It does NOT include:
+# - the fingerprint itself
+# - the Konnex adapter payload
+# - the exported artifact metadata
+#
+# This prevents circular hashing while giving the Konnex
+# adapter a stable fingerprint to reference.
+EVIDENCE_FINGERPRINT_SCOPE = (
+    "local ON1 mission evidence core"
+)
+
 
 # ============================================================
 # FIREBASE / FIRESTORE
@@ -160,11 +177,15 @@ def calculate_evidence_fingerprint(
     evidence_package: dict[str, Any],
 ) -> str:
     """
-    Create a local SHA-256 fingerprint of the
-    evidence package.
+    Create a deterministic local SHA-256 fingerprint.
 
-    This is NOT a blockchain hash and does NOT
-    represent Konnex verification.
+    The package is converted into canonical JSON by:
+    - sorting object keys
+    - removing insignificant JSON separators
+    - encoding as UTF-8
+
+    This is NOT a blockchain hash and does NOT represent
+    Konnex verification.
     """
 
     canonical_json = json.dumps(
@@ -177,6 +198,58 @@ def calculate_evidence_fingerprint(
     return hashlib.sha256(
         canonical_json
     ).hexdigest()
+
+
+def build_fingerprint_package(
+    mission: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Build the canonical ON1 mission evidence core used for
+    the SHA-256 fingerprint.
+
+    IMPORTANT:
+
+    The fingerprint package deliberately excludes:
+    - evidenceFingerprint
+    - Konnex adapter data
+    - export artifact metadata
+    - generated export timestamps
+
+    This prevents circular hashing and ensures that the
+    fingerprint represents the actual mission evidence.
+
+    The resulting scope is:
+
+        local ON1 mission evidence core
+    """
+
+    return {
+        "project": PROJECT_NAME,
+
+        "prototypeVersion": (
+            PROTOTYPE_VERSION
+        ),
+
+        "machine": {
+            "robotId": mission.get(
+                "robotId"
+            ),
+
+            "identity": ROBOT_IDENTITY,
+
+            "model": ROBOT_MODEL,
+        },
+
+        "mission": mission,
+
+        "integration": {
+            "physicalHardware": False,
+
+            "konnexVerified": False,
+
+            "onChainVerified": False,
+        },
+    }
 
 
 # ============================================================
@@ -225,6 +298,9 @@ class KonnexAdapter:
         already performed by ON1.
 
         It does NOT claim that Konnex has verified anything.
+
+        The fingerprint is supplied by the canonical ON1
+        evidence pipeline before this adapter is persisted.
         """
 
         validator = mission.get(
@@ -373,8 +449,7 @@ class KonnexAdapter:
                 "value": fingerprint,
 
                 "scope": (
-                    "local backend "
-                    "evidence package"
+                    EVIDENCE_FINGERPRINT_SCOPE
                 ),
             },
 
@@ -559,11 +634,47 @@ def save_mission_evidence(
     The mission document is stored at:
 
         devices/{deviceId}/missions/{missionId}
+
+    At this stage the mission must already contain:
+    - evidence
+    - validatorResult
+    - powpScore
+    - evidenceFingerprint
+    - Konnex adapter payload
+
+    This ensures Firebase receives the complete evidence
+    package in one coherent persistence step.
     """
 
     mission_id = mission[
         "missionId"
     ]
+
+    fingerprint_data = mission.get(
+        "evidenceFingerprint",
+        {},
+    )
+
+    fingerprint = fingerprint_data.get(
+        "value"
+    )
+
+    # The adapter should already have been created using
+    # the canonical fingerprint.
+    #
+    # The fallback exists only as a defensive measure.
+    konnex_payload = mission.get(
+        "konnexAdapter"
+    )
+
+    if konnex_payload is None:
+
+        konnex_payload = (
+            konnex_adapter.build_submission_payload(
+                mission,
+                fingerprint=fingerprint,
+            )
+        )
 
     mission_record = {
         "recordType": "mission_evidence",
@@ -654,14 +765,20 @@ def save_mission_evidence(
             "onChainVerified": False,
         },
 
+        # The canonical fingerprint is now persisted
+        # together with the mission evidence.
+        "evidenceFingerprint": (
+            mission.get(
+                "evidenceFingerprint"
+            )
+        ),
+
         # Konnex-ready representation.
         #
         # This is an adapter payload only.
         # It is NOT a Konnex submission or verification.
         "konnexAdapter": (
-            konnex_adapter.build_submission_payload(
-                mission
-            )
+            konnex_payload
         ),
 
         "persistedAt": utc_now(),
@@ -683,11 +800,17 @@ def update_mission_evidence_artifact(
     fingerprint: str,
 ) -> None:
     """
-    Add evidence-artifact and fingerprint metadata to
-    an existing persisted mission evidence record.
+    Add evidence-artifact metadata to an already persisted
+    mission evidence record.
 
-    This is performed after the evidence package has been
-    exported and fingerprinted.
+    IMPORTANT:
+
+    The complete Konnex adapter is already persisted during
+    save_mission_evidence().
+
+    This function therefore does NOT replace the adapter with
+    a reduced object. It only adds the exported artifact
+    metadata and confirms the same canonical fingerprint.
     """
 
     mission_ref = (
@@ -712,8 +835,7 @@ def update_mission_evidence_artifact(
                 "algorithm": "SHA-256",
 
                 "scope": (
-                    "local backend "
-                    "evidence package"
+                    EVIDENCE_FINGERPRINT_SCOPE
                 ),
             },
 
@@ -723,35 +845,6 @@ def update_mission_evidence_artifact(
                 "konnexVerified": False,
 
                 "onChainVerified": False,
-            },
-
-            "konnexAdapter": {
-                "adapter": {
-                    "name": "ON1 Konnex Adapter",
-                    "version": KONNEX_ADAPTER_VERSION,
-                    "status": KONNEX_ADAPTER_STATUS,
-                },
-
-                "submission": {
-                    "submittedToKonnex": False,
-
-                    "konnexVerified": False,
-
-                    "onChainVerified": False,
-                },
-
-                "evidenceFingerprint": {
-                    "algorithm": "SHA-256",
-
-                    "value": fingerprint,
-
-                    "scope": (
-                        "local backend "
-                        "evidence package"
-                    ),
-                },
-
-                "fingerprintedAt": utc_now(),
             },
 
             "fingerprintedAt": utc_now(),
@@ -1088,17 +1181,29 @@ class MissionEngine:
             ),
         }
 
+        # ----------------------------------------------------
+        # STEP 1 — Generate evidence
+        # ----------------------------------------------------
+
         mission[
             "evidence"
         ] = self.generate_evidence(
             mission
         )
 
+        # ----------------------------------------------------
+        # STEP 2 — Validate mission
+        # ----------------------------------------------------
+
         mission[
             "validatorResult"
         ] = self.validate_mission(
             mission
         )
+
+        # ----------------------------------------------------
+        # STEP 3 — Calculate PoPW-style score
+        # ----------------------------------------------------
 
         mission[
             "powpScore"
@@ -1108,24 +1213,94 @@ class MissionEngine:
             ]
         )
 
+        # ----------------------------------------------------
+        # STEP 4 — Build canonical evidence core
+        # ----------------------------------------------------
+
+        fingerprint_package = (
+            build_fingerprint_package(
+                mission
+            )
+        )
+
+        # ----------------------------------------------------
+        # STEP 5 — Generate ONE canonical fingerprint
+        # ----------------------------------------------------
+
+        evidence_fingerprint = (
+            calculate_evidence_fingerprint(
+                fingerprint_package
+            )
+        )
+
+        mission[
+            "evidenceFingerprint"
+        ] = {
+
+            "algorithm": "SHA-256",
+
+            "value": evidence_fingerprint,
+
+            "scope": (
+                EVIDENCE_FINGERPRINT_SCOPE
+            ),
+
+            "konnexVerified": False,
+
+            "onChainVerified": False,
+        }
+
+        # ----------------------------------------------------
+        # STEP 6 — Build Konnex adapter using the same
+        #          canonical fingerprint
+        # ----------------------------------------------------
+
+        mission[
+            "konnexAdapter"
+        ] = (
+            konnex_adapter.build_submission_payload(
+                mission,
+                fingerprint=evidence_fingerprint,
+            )
+        )
+
+        # ----------------------------------------------------
+        # STEP 7 — Return machine to IDLE
+        # ----------------------------------------------------
+
         verified = mission[
             "validatorResult"
         ]["verified"]
 
         self.robot.status = "IDLE"
 
+        # ----------------------------------------------------
+        # STEP 8 — Update machine reputation
+        # ----------------------------------------------------
+
         self.robot.update_reputation(
             verified
         )
 
-        # Persist compact machine memory.
+        # ----------------------------------------------------
+        # STEP 9 — Persist compact machine memory
+        # ----------------------------------------------------
+
         self.robot.remember(
             mission
         )
 
-        # Persist the complete mission evidence package.
+        # ----------------------------------------------------
+        # STEP 10 — Persist complete mission evidence
         #
-        # This remains separate from machine memory.
+        # At this point the mission already contains:
+        # - evidence
+        # - validatorResult
+        # - PoPW score
+        # - canonical fingerprint
+        # - complete Konnex adapter
+        # ----------------------------------------------------
+
         save_mission_evidence(
             mission
         )
@@ -1414,6 +1589,22 @@ def run_mission() -> dict[str, Any]:
         "robot": robot.to_dict(),
 
         "mission": mission,
+
+        # Expose the canonical fingerprint at the top
+        # level for convenient API/frontend consumption.
+        "evidenceFingerprint": (
+            mission.get(
+                "evidenceFingerprint"
+            )
+        ),
+
+        # Expose the same Konnex-ready adapter package
+        # in the exported/API result.
+        "konnexAdapter": (
+            mission.get(
+                "konnexAdapter"
+            )
+        ),
     }
 
     return result
@@ -1426,18 +1617,88 @@ def run_mission() -> dict[str, Any]:
 def export_evidence(
     result: dict[str, Any],
 ) -> tuple[Path, str]:
+    """
+    Export the already-canonical mission evidence package.
+
+    IMPORTANT:
+
+    This function does NOT create a second fingerprint.
+
+    The canonical fingerprint was created during mission
+    execution before the Konnex adapter was built.
+
+    Therefore:
+        mission fingerprint
+        =
+        Firebase fingerprint
+        =
+        Konnex adapter fingerprint
+        =
+        exported evidence fingerprint
+    """
 
     OUTPUT_DIRECTORY.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    fingerprint = (
-        calculate_evidence_fingerprint(
-            result
+    evidence_fingerprint = (
+        result.get(
+            "evidenceFingerprint"
         )
     )
 
+    fingerprint = None
+
+    if isinstance(
+        evidence_fingerprint,
+        dict,
+    ):
+
+        fingerprint = (
+            evidence_fingerprint.get(
+                "value"
+            )
+        )
+
+    # Defensive fallback for compatibility with an
+    # older result object that may not contain the
+    # top-level fingerprint.
+    if not fingerprint:
+
+        mission = result.get(
+            "mission",
+            {},
+        )
+
+        mission_fingerprint = (
+            mission.get(
+                "evidenceFingerprint",
+                {},
+            )
+        )
+
+        if isinstance(
+            mission_fingerprint,
+            dict,
+        ):
+
+            fingerprint = (
+                mission_fingerprint.get(
+                    "value"
+                )
+            )
+
+    if not fingerprint:
+
+        raise ValueError(
+            "Canonical evidence fingerprint is missing. "
+            "The mission must be executed through the "
+            "current evidence pipeline before export."
+        )
+
+    # Ensure the top-level export and mission carry the
+    # exact same fingerprint object.
     result[
         "evidenceFingerprint"
     ] = {
@@ -1447,14 +1708,36 @@ def export_evidence(
         "value": fingerprint,
 
         "scope": (
-            "local backend "
-            "evidence package"
+            EVIDENCE_FINGERPRINT_SCOPE
         ),
 
         "konnexVerified": False,
 
         "onChainVerified": False,
     }
+
+    mission = result.get(
+        "mission",
+        {},
+    )
+
+    mission[
+        "evidenceFingerprint"
+    ] = result[
+        "evidenceFingerprint"
+    ]
+
+    # Ensure the top-level Konnex adapter remains the exact
+    # adapter that was built using this fingerprint.
+    if mission.get(
+        "konnexAdapter"
+    ):
+
+        result[
+            "konnexAdapter"
+        ] = mission[
+            "konnexAdapter"
+        ]
 
     with OUTPUT_FILE.open(
         "w",
@@ -1471,12 +1754,7 @@ def export_evidence(
         file.write("\n")
 
     # Update the already-persisted mission evidence
-    # record with its exported artifact and fingerprint.
-    mission = result.get(
-        "mission",
-        {}
-    )
-
+    # record with its exported artifact metadata.
     mission_id = mission.get(
         "missionId"
     )
@@ -1692,6 +1970,10 @@ def print_demo(
     print(
         f"  Status: "
         f"{KONNEX_ADAPTER_STATUS}"
+    )
+
+    print(
+        "  Fingerprint attached: True"
     )
 
     print(
