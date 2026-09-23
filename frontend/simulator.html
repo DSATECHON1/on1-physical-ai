@@ -1330,39 +1330,58 @@ function renderValidation(
     return;
   }
 
-  let checks = [];
+  /*
+   * The ON1 Physical AI backend returns:
+   *
+   * validatorResult: {
+   *   validatorId: "...",
+   *   validatedAt: "...",
+   *   checks: {
+   *     missionStarted: true,
+   *     missionCompleted: true,
+   *     telemetryPresent: true,
+   *     targetReached: true,
+   *     robotIdentityPresent: true,
+   *     evidenceGenerated: true
+   *   },
+   *   passedChecks: 6,
+   *   totalChecks: 6,
+   *   verified: true
+   * }
+   *
+   * `checks` is an OBJECT, not an ARRAY.
+   *
+   * The previous renderer incorrectly inspected the
+   * validator metadata itself and therefore displayed
+   * Validator ID / Validated At / Passed Checks / Total
+   * Checks as FAILED.
+   *
+   * This renderer explicitly reads validator.checks.
+   */
 
-  if (Array.isArray(validator.checks)) {
+  const checks =
+    validator.checks &&
+    typeof validator.checks === "object" &&
+    !Array.isArray(validator.checks)
+      ? validator.checks
+      : null;
 
-    checks =
-      validator.checks;
+  if (!checks) {
 
-  } else {
+    /*
+     * Backward compatibility for any future backend
+     * response where checks may be returned as an array.
+     */
 
-    Object.entries(validator).forEach(
-      ([key, value]) => {
+    if (Array.isArray(validator.checks)) {
 
-        if (
-          typeof value === "boolean" ||
-          typeof value === "string" ||
-          typeof value === "number"
-        ) {
+      renderValidationArray(
+        container,
+        validator
+      );
 
-          checks.push({
-            name: key,
-            passed:
-              value === true ||
-              String(value).toLowerCase() === "passed" ||
-              String(value).toLowerCase() === "pass"
-          });
-
-        }
-
-      }
-    );
-  }
-
-  if (checks.length === 0) {
+      return;
+    }
 
     container.innerHTML =
       `<pre>${escapeHtml(
@@ -1376,16 +1395,178 @@ function renderValidation(
     return;
   }
 
-  container.innerHTML = "";
+  let html = "";
 
-  checks.forEach(
+  /*
+   * Validator metadata
+   */
+
+  if (validator.validatorId) {
+
+    html += `
+      <div class="row">
+        <span class="label">Validator ID</span>
+        <span class="value">
+          ${escapeHtml(
+            validator.validatorId
+          )}
+        </span>
+      </div>
+    `;
+
+  }
+
+  if (validator.validatedAt) {
+
+    html += `
+      <div class="row">
+        <span class="label">Validated At</span>
+        <span class="value">
+          ${escapeHtml(
+            validator.validatedAt
+          )}
+        </span>
+      </div>
+    `;
+
+  }
+
+  /*
+   * Individual validation checks
+   */
+
+  Object.entries(checks).forEach(
+    ([key, value]) => {
+
+      const passed =
+        value === true ||
+        String(value).toLowerCase() === "passed" ||
+        String(value).toLowerCase() === "pass";
+
+      html += `
+        <div class="check">
+          <span>
+            ${escapeHtml(
+              formatLabel(key)
+            )}
+          </span>
+
+          <span class="${passed ? "pass" : "fail"}">
+            ${passed ? "PASSED" : "FAILED"}
+          </span>
+        </div>
+      `;
+
+    }
+  );
+
+  /*
+   * Validation summary
+   */
+
+  if (
+    validator.passedChecks !== undefined
+  ) {
+
+    html += `
+      <div class="row">
+        <span class="label">Passed Checks</span>
+        <span class="value">
+          ${escapeHtml(
+            String(
+              validator.passedChecks
+            )
+          )}
+        </span>
+      </div>
+    `;
+
+  }
+
+  if (
+    validator.totalChecks !== undefined
+  ) {
+
+    html += `
+      <div class="row">
+        <span class="label">Total Checks</span>
+        <span class="value">
+          ${escapeHtml(
+            String(
+              validator.totalChecks
+            )
+          )}
+        </span>
+      </div>
+    `;
+
+  }
+
+  /*
+   * Final verification state
+   */
+
+  const verified =
+    validator.verified === true;
+
+  html += `
+    <div class="check">
+      <span>Verified</span>
+
+      <span class="${verified ? "pass" : "fail"}">
+        ${verified ? "PASSED" : "FAILED"}
+      </span>
+    </div>
+  `;
+
+  container.innerHTML =
+    html;
+}
+
+
+/* =========================================================
+   VALIDATION ARRAY FALLBACK
+   ========================================================= */
+
+function renderValidationArray(
+  container,
+  validator
+) {
+
+  let html = "";
+
+  if (validator.validatorId) {
+
+    html += `
+      <div class="row">
+        <span class="label">Validator ID</span>
+        <span class="value">
+          ${escapeHtml(
+            validator.validatorId
+          )}
+        </span>
+      </div>
+    `;
+
+  }
+
+  if (validator.validatedAt) {
+
+    html += `
+      <div class="row">
+        <span class="label">Validated At</span>
+        <span class="value">
+          ${escapeHtml(
+            validator.validatedAt
+          )}
+        </span>
+      </div>
+    `;
+
+  }
+
+  validator.checks.forEach(
     check => {
-
-      const row =
-        document.createElement("div");
-
-      row.className =
-        "check";
 
       const name =
         check.name ||
@@ -1399,20 +1580,76 @@ function renderValidation(
         check.status === "PASSED" ||
         check.status === "PASS";
 
-      row.innerHTML = `
-        <span>${escapeHtml(
-          formatLabel(name)
-        )}</span>
+      html += `
+        <div class="check">
+          <span>
+            ${escapeHtml(
+              formatLabel(name)
+            )}
+          </span>
 
-        <span class="${passed ? "pass" : "fail"}">
-          ${passed ? "PASSED" : "FAILED"}
-        </span>
+          <span class="${passed ? "pass" : "fail"}">
+            ${passed ? "PASSED" : "FAILED"}
+          </span>
+        </div>
       `;
-
-      container.appendChild(row);
 
     }
   );
+
+  if (
+    validator.passedChecks !== undefined
+  ) {
+
+    html += `
+      <div class="row">
+        <span class="label">Passed Checks</span>
+        <span class="value">
+          ${escapeHtml(
+            String(
+              validator.passedChecks
+            )
+          )}
+        </span>
+      </div>
+    `;
+
+  }
+
+  if (
+    validator.totalChecks !== undefined
+  ) {
+
+    html += `
+      <div class="row">
+        <span class="label">Total Checks</span>
+        <span class="value">
+          ${escapeHtml(
+            String(
+              validator.totalChecks
+            )
+          )}
+        </span>
+      </div>
+    `;
+
+  }
+
+  const verified =
+    validator.verified === true;
+
+  html += `
+    <div class="check">
+      <span>Verified</span>
+
+      <span class="${verified ? "pass" : "fail"}">
+        ${verified ? "PASSED" : "FAILED"}
+      </span>
+    </div>
+  `;
+
+  container.innerHTML =
+    html;
 }
 
 
