@@ -632,11 +632,6 @@ const ROBOT_ENDPOINT = `${API_BASE}/robot`;
 const MISSION_ENDPOINT = `${API_BASE}/missions`;
 
 const ROBOT_TIMEOUT_MS = 30000;
-
-/*
- * Render free instances can cold-start.
- * Mission requests therefore receive a longer timeout.
- */
 const MISSION_TIMEOUT_MS = 90000;
 
 
@@ -654,7 +649,7 @@ const state = {
 
 
 /* =========================================================
-   DOM HELPERS
+   DOM HELPER
    ========================================================= */
 
 function el(id) {
@@ -896,9 +891,11 @@ async function runMission() {
 
   el("powpScore").textContent = "0";
 
-  el("missionId").textContent = "Backend processing...";
+  el("missionId").textContent =
+    "Backend processing...";
 
-  el("evidenceId").textContent = "Backend processing...";
+  el("evidenceId").textContent =
+    "Backend processing...";
 
   el("backendResult").textContent =
     "Submitting navigation mission to ON1 Physical AI backend...";
@@ -915,20 +912,19 @@ async function runMission() {
   try {
 
     /*
-     * The backend is authoritative.
-     * The browser does not create the mission ID,
-     * evidence ID, reputation or verification result.
+     * IMPORTANT:
+     * The live ON1 Physical AI API expects
+     * coordinates as two-element arrays:
+     *
+     * start:  [x, y]
+     * target: [x, y]
+     *
+     * The backend remains authoritative.
      */
 
     const payload = {
-      start: {
-        x: 0,
-        y: 0
-      },
-      target: {
-        x: 10,
-        y: 10
-      }
+      start: [0, 0],
+      target: [10, 10]
     };
 
     const response = await fetchWithTimeout(
@@ -971,8 +967,9 @@ async function runMission() {
     renderBackendMission(result);
 
     /*
-     * Reload authoritative robot/Firebase state.
+     * Reload authoritative Firebase-backed robot state.
      */
+
     await loadRobot();
 
     setBackendStatus(
@@ -1039,10 +1036,14 @@ function startVisualMission() {
 
     step++;
 
-    const ratio = Math.min(step / totalSteps, 1);
+    const ratio =
+      Math.min(step / totalSteps, 1);
 
-    const x = Math.round(10 * ratio * 100) / 100;
-    const y = Math.round(10 * ratio * 100) / 100;
+    const x =
+      Math.round(10 * ratio * 100) / 100;
+
+    const y =
+      Math.round(10 * ratio * 100) / 100;
 
     updateRobotPosition(x, y);
 
@@ -1057,12 +1058,6 @@ function startVisualMission() {
     });
 
     if (step >= totalSteps) {
-
-      /*
-       * Do not mark the mission verified here.
-       * Backend response remains authoritative.
-       */
-
       stopVisualMission();
     }
 
@@ -1097,19 +1092,14 @@ function stopVisualMission() {
 
 function updateRobotPosition(x, y) {
 
-  /*
-   * Map coordinates:
-   * (0,0)   -> left 12%, top 82%
-   * (10,10) -> left 88%, top 18%
-   */
-
   const left =
     12 + ((Number(x) / 10) * 76);
 
   const top =
     82 - ((Number(y) / 10) * 64);
 
-  const robotPoint = el("robotPoint");
+  const robotPoint =
+    el("robotPoint");
 
   robotPoint.style.left =
     `${Math.max(12, Math.min(88, left))}%`;
@@ -1131,11 +1121,14 @@ function resetTelemetry() {
 
 function addTelemetry(point) {
 
-  const container = el("telemetry");
+  const container =
+    el("telemetry");
 
-  const row = document.createElement("div");
+  const row =
+    document.createElement("div");
 
-  row.className = "telemetry-row";
+  row.className =
+    "telemetry-row";
 
   row.textContent =
     `Step ${point.step} · ` +
@@ -1211,9 +1204,13 @@ function renderBackendMission(result) {
     String(status).toUpperCase()
   );
 
-  renderTelemetryFromBackend(telemetry);
+  renderTelemetryFromBackend(
+    telemetry
+  );
 
-  renderValidation(validator);
+  renderValidation(
+    validator
+  );
 
   renderEvidence(
     evidence,
@@ -1244,43 +1241,53 @@ function renderBackendMission(result) {
    BACKEND TELEMETRY
    ========================================================= */
 
-function renderTelemetryFromBackend(telemetry) {
+function renderTelemetryFromBackend(
+  telemetry
+) {
 
-  if (!Array.isArray(telemetry) || telemetry.length === 0) {
+  if (
+    !Array.isArray(telemetry) ||
+    telemetry.length === 0
+  ) {
     return;
   }
 
-  const container = el("telemetry");
+  const container =
+    el("telemetry");
 
   container.innerHTML = "";
 
-  telemetry.forEach((point, index) => {
+  telemetry.forEach(
+    (point, index) => {
 
-    const row = document.createElement("div");
+      const row =
+        document.createElement("div");
 
-    row.className = "telemetry-row";
+      row.className =
+        "telemetry-row";
 
-    const step =
-      point.step ??
-      point.stepNumber ??
-      index + 1;
+      const step =
+        point.step ??
+        point.stepNumber ??
+        index + 1;
 
-    const x =
-      point.x ??
-      point.position?.x ??
-      "—";
+      const x =
+        point.x ??
+        point.position?.x ??
+        "—";
 
-    const y =
-      point.y ??
-      point.position?.y ??
-      "—";
+      const y =
+        point.y ??
+        point.position?.y ??
+        "—";
 
-    row.textContent =
-      `Step ${step} · Position (${x}, ${y})`;
+      row.textContent =
+        `Step ${step} · Position (${x}, ${y})`;
 
-    container.appendChild(row);
+      container.appendChild(row);
 
-  });
+    }
+  );
 
   const last =
     telemetry[telemetry.length - 1];
@@ -1306,14 +1313,19 @@ function renderTelemetryFromBackend(telemetry) {
    VALIDATION
    ========================================================= */
 
-function renderValidation(validator) {
+function renderValidation(
+  validator
+) {
 
-  const container = el("validation");
+  const container =
+    el("validation");
 
   if (!validator) {
 
     container.innerHTML =
-      `<div class="empty">No validator result returned.</div>`;
+      `<div class="empty">
+        No validator result returned.
+      </div>`;
 
     return;
   }
@@ -1322,18 +1334,10 @@ function renderValidation(validator) {
 
   if (Array.isArray(validator.checks)) {
 
-    checks = validator.checks;
+    checks =
+      validator.checks;
 
   } else {
-
-    /*
-     * Supports the common object format:
-     * {
-     *   path_valid: true,
-     *   telemetry_valid: true,
-     *   ...
-     * }
-     */
 
     Object.entries(validator).forEach(
       ([key, value]) => {
@@ -1362,7 +1366,11 @@ function renderValidation(validator) {
 
     container.innerHTML =
       `<pre>${escapeHtml(
-        JSON.stringify(validator, null, 2)
+        JSON.stringify(
+          validator,
+          null,
+          2
+        )
       )}</pre>`;
 
     return;
@@ -1370,37 +1378,41 @@ function renderValidation(validator) {
 
   container.innerHTML = "";
 
-  checks.forEach(check => {
+  checks.forEach(
+    check => {
 
-    const row = document.createElement("div");
+      const row =
+        document.createElement("div");
 
-    row.className = "check";
+      row.className =
+        "check";
 
-    const name =
-      check.name ||
-      check.check ||
-      check.label ||
-      "Validation";
+      const name =
+        check.name ||
+        check.check ||
+        check.label ||
+        "Validation";
 
-    const passed =
-      check.passed === true ||
-      check.valid === true ||
-      check.status === "PASSED" ||
-      check.status === "PASS";
+      const passed =
+        check.passed === true ||
+        check.valid === true ||
+        check.status === "PASSED" ||
+        check.status === "PASS";
 
-    row.innerHTML = `
-      <span>${escapeHtml(
-        formatLabel(name)
-      )}</span>
+      row.innerHTML = `
+        <span>${escapeHtml(
+          formatLabel(name)
+        )}</span>
 
-      <span class="${passed ? "pass" : "fail"}">
-        ${passed ? "PASSED" : "FAILED"}
-      </span>
-    `;
+        <span class="${passed ? "pass" : "fail"}">
+          ${passed ? "PASSED" : "FAILED"}
+        </span>
+      `;
 
-    container.appendChild(row);
+      container.appendChild(row);
 
-  });
+    }
+  );
 }
 
 
@@ -1408,14 +1420,20 @@ function renderValidation(validator) {
    EVIDENCE
    ========================================================= */
 
-function renderEvidence(evidence, result) {
+function renderEvidence(
+  evidence,
+  result
+) {
 
-  const container = el("evidence");
+  const container =
+    el("evidence");
 
   if (!evidence) {
 
     container.innerHTML =
-      `<div class="empty">No evidence object returned.</div>`;
+      `<div class="empty">
+        No evidence object returned.
+      </div>`;
 
     return;
   }
@@ -1441,11 +1459,15 @@ function renderEvidence(evidence, result) {
       html += `
         <div class="row">
           <span class="label">
-            ${escapeHtml(formatLabel(key))}
+            ${escapeHtml(
+              formatLabel(key)
+            )}
           </span>
 
           <span class="value">
-            ${escapeHtml(String(value))}
+            ${escapeHtml(
+              String(value)
+            )}
           </span>
         </div>
       `;
@@ -1457,8 +1479,13 @@ function renderEvidence(evidence, result) {
 
     html += `
       <div class="row">
-        <span class="label">Evidence Artifact</span>
-        <span class="value">Available</span>
+        <span class="label">
+          Evidence Artifact
+        </span>
+
+        <span class="value">
+          Available
+        </span>
       </div>
     `;
 
@@ -1468,12 +1495,17 @@ function renderEvidence(evidence, result) {
 
     html =
       `<pre>${escapeHtml(
-        JSON.stringify(evidence, null, 2)
+        JSON.stringify(
+          evidence,
+          null,
+          2
+        )
       )}</pre>`;
 
   }
 
-  container.innerHTML = html;
+  container.innerHTML =
+    html;
 }
 
 
@@ -1481,10 +1513,14 @@ function renderEvidence(evidence, result) {
    STATUS HELPERS
    ========================================================= */
 
-function setMissionStatus(status) {
+function setMissionStatus(
+  status
+) {
 
   const normalized =
-    String(status || "PENDING").toUpperCase();
+    String(
+      status || "PENDING"
+    ).toUpperCase();
 
   const element =
     el("missionStatus");
@@ -1492,13 +1528,16 @@ function setMissionStatus(status) {
   element.textContent =
     normalized;
 
-  element.className = "status";
+  element.className =
+    "status";
 
   if (
     normalized === "RUNNING" ||
     normalized === "EXECUTING"
   ) {
-    element.classList.add("running");
+    element.classList.add(
+      "running"
+    );
   }
 
   if (
@@ -1506,14 +1545,18 @@ function setMissionStatus(status) {
     normalized === "VERIFIED" ||
     normalized === "SUCCESS"
   ) {
-    element.classList.add("success");
+    element.classList.add(
+      "success"
+    );
   }
 
   if (
     normalized === "FAILED" ||
     normalized === "ERROR"
   ) {
-    element.classList.add("failed");
+    element.classList.add(
+      "failed"
+    );
   }
 }
 
@@ -1523,11 +1566,16 @@ function verificationResultText(
   status
 ) {
 
-  if (typeof verification === "string") {
+  if (
+    typeof verification === "string"
+  ) {
     return verification;
   }
 
-  if (verification && typeof verification === "object") {
+  if (
+    verification &&
+    typeof verification === "object"
+  ) {
 
     if (verification.result) {
       return verification.result;
@@ -1537,18 +1585,23 @@ function verificationResultText(
       return verification.status;
     }
 
-    if (verification.verified === true) {
+    if (
+      verification.verified === true
+    ) {
       return "VERIFIED";
     }
   }
 
   if (
-    String(status).toUpperCase() === "COMPLETED"
+    String(status).toUpperCase() ===
+    "COMPLETED"
   ) {
     return "VERIFIED";
   }
 
-  return String(status || "PENDING").toUpperCase();
+  return String(
+    status || "PENDING"
+  ).toUpperCase();
 }
 
 
@@ -1565,7 +1618,8 @@ async function resetMission() {
 
   updateRobotPosition(0, 0);
 
-  el("progress").style.width = "0%";
+  el("progress").style.width =
+    "0%";
 
   el("missionStatus").textContent =
     "PENDING";
@@ -1586,7 +1640,9 @@ async function resetMission() {
     "—";
 
   el("telemetry").innerHTML =
-    `<div class="empty">No telemetry available.</div>`;
+    `<div class="empty">
+      No telemetry available.
+    </div>`;
 
   el("validation").innerHTML =
     `<div class="empty">
@@ -1601,7 +1657,8 @@ async function resetMission() {
   el("backendResult").textContent =
     "Waiting for mission execution...";
 
-  el("exportButton").disabled = true;
+  el("exportButton").disabled =
+    true;
 
   await loadRobot();
 }
@@ -1613,22 +1670,25 @@ async function resetMission() {
 
 function exportEvidence() {
 
-  if (!state.latestBackendResult) {
+  if (
+    !state.latestBackendResult
+  ) {
     return;
   }
 
-  const blob = new Blob(
-    [
-      JSON.stringify(
-        state.latestBackendResult,
-        null,
-        2
-      )
-    ],
-    {
-      type: "application/json"
-    }
-  );
+  const blob =
+    new Blob(
+      [
+        JSON.stringify(
+          state.latestBackendResult,
+          null,
+          2
+        )
+      ],
+      {
+        type: "application/json"
+      }
+    );
 
   const url =
     URL.createObjectURL(blob);
@@ -1636,11 +1696,15 @@ function exportEvidence() {
   const link =
     document.createElement("a");
 
-  link.href = url;
+  link.href =
+    url;
 
   const missionId =
-    state.latestBackendResult?.mission?.missionId ||
-    state.latestBackendResult?.missionId ||
+    state.latestBackendResult
+      ?.mission
+      ?.missionId ||
+    state.latestBackendResult
+      ?.missionId ||
     "mission";
 
   link.download =
@@ -1663,22 +1727,49 @@ function exportEvidence() {
 function formatLabel(value) {
 
   return String(value)
-    .replace(/([A-Z])/g, " $1")
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ")
+    .replace(
+      /([A-Z])/g,
+      " $1"
+    )
+    .replace(
+      /[_-]+/g,
+      " "
+    )
+    .replace(
+      /\s+/g,
+      " "
+    )
     .trim()
-    .replace(/^./, char => char.toUpperCase());
+    .replace(
+      /^./,
+      char => char.toUpperCase()
+    );
 }
 
 
 function escapeHtml(value) {
 
   return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replace(
+      /&/g,
+      "&amp;"
+    )
+    .replace(
+      /</g,
+      "&lt;"
+    )
+    .replace(
+      />/g,
+      "&gt;"
+    )
+    .replace(
+      /"/g,
+      "&quot;"
+    )
+    .replace(
+      /'/g,
+      "&#039;"
+    );
 }
 
 
