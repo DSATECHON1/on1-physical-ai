@@ -14,6 +14,7 @@ Prototype backend for:
 - Mission evidence persistence
 - Evidence artifact export
 - Local evidence fingerprint
+- Konnex integration boundary
 - Firebase / Firestore persistence
 
 This is a software prototype.
@@ -45,7 +46,7 @@ from firebase_admin import firestore
 # ============================================================
 
 PROJECT_NAME = "ON1 Physical AI"
-PROTOTYPE_VERSION = "0.5.0"
+PROTOTYPE_VERSION = "0.5.1"
 
 VALIDATOR_ID = "ON1-BACKEND-VALIDATOR-001"
 
@@ -71,6 +72,10 @@ FIREBASE_CREDENTIALS_PATH = (
 
 OUTPUT_DIRECTORY = Path("backend_output")
 OUTPUT_FILE = OUTPUT_DIRECTORY / "mission-result.json"
+
+# Konnex adapter boundary
+KONNEX_ADAPTER_VERSION = "0.1.0"
+KONNEX_ADAPTER_STATUS = "READY_FOR_KONNEX_REVIEW"
 
 
 # ============================================================
@@ -172,6 +177,222 @@ def calculate_evidence_fingerprint(
     return hashlib.sha256(
         canonical_json
     ).hexdigest()
+
+
+# ============================================================
+# KONNEX INTEGRATION BOUNDARY
+# ============================================================
+
+class KonnexAdapter:
+    """
+    Konnex integration boundary.
+
+    This adapter does NOT connect to Konnex.
+
+    Its responsibility at the current prototype stage is
+    to transform an ON1 verified mission into a stable,
+    machine-readable submission package that a future
+    Konnex transport/validator implementation can consume.
+
+    The adapter deliberately contains no:
+    - wallet handling
+    - private keys
+    - chain connection
+    - TAO transaction
+    - Bittensor dependency
+    - network submission
+
+    This keeps the ON1 mission/evidence system independent
+    from the future Konnex transport layer.
+    """
+
+    def __init__(
+        self,
+        version: str = KONNEX_ADAPTER_VERSION,
+    ) -> None:
+
+        self.version = version
+
+    def build_submission_payload(
+        self,
+        mission: dict[str, Any],
+        fingerprint: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Build a Konnex-ready mission submission payload.
+
+        The payload describes the evidence and verification
+        already performed by ON1.
+
+        It does NOT claim that Konnex has verified anything.
+        """
+
+        validator = mission.get(
+            "validatorResult",
+            {},
+        )
+
+        evidence = mission.get(
+            "evidence",
+            {},
+        )
+
+        payload = {
+            "schema": "on1.physical-ai.konnex-mission.v1",
+
+            "adapter": {
+                "name": "ON1 Konnex Adapter",
+                "version": self.version,
+                "status": KONNEX_ADAPTER_STATUS,
+            },
+
+            "submission": {
+                "missionId": mission.get(
+                    "missionId"
+                ),
+
+                "submissionStatus": (
+                    KONNEX_ADAPTER_STATUS
+                ),
+
+                "submittedToKonnex": False,
+
+                "konnexVerified": False,
+
+                "onChainVerified": False,
+            },
+
+            "machine": {
+                "robotId": mission.get(
+                    "robotId"
+                ),
+
+                "identity": ROBOT_IDENTITY,
+
+                "model": ROBOT_MODEL,
+            },
+
+            "mission": {
+                "taskType": mission.get(
+                    "taskType"
+                ),
+
+                "start": mission.get(
+                    "start"
+                ),
+
+                "target": mission.get(
+                    "target"
+                ),
+
+                "startedAt": mission.get(
+                    "startedAt"
+                ),
+
+                "completedAt": mission.get(
+                    "completedAt"
+                ),
+
+                "status": mission.get(
+                    "status"
+                ),
+            },
+
+            "telemetry": {
+                "points": mission.get(
+                    "telemetry",
+                    []
+                ),
+
+                "count": len(
+                    mission.get(
+                        "telemetry",
+                        []
+                    )
+                ),
+            },
+
+            "evidence": {
+                "evidenceId": evidence.get(
+                    "evidenceId"
+                ),
+
+                "telemetryPoints": evidence.get(
+                    "telemetryPoints"
+                ),
+
+                "generatedAt": evidence.get(
+                    "generatedAt"
+                ),
+
+                "status": evidence.get(
+                    "status"
+                ),
+            },
+
+            "validation": {
+                "validatorId": validator.get(
+                    "validatorId"
+                ),
+
+                "verified": validator.get(
+                    "verified",
+                    False,
+                ),
+
+                "passedChecks": validator.get(
+                    "passedChecks",
+                    0,
+                ),
+
+                "totalChecks": validator.get(
+                    "totalChecks",
+                    0,
+                ),
+
+                "validatedAt": validator.get(
+                    "validatedAt"
+                ),
+            },
+
+            "powp": {
+                "score": mission.get(
+                    "powpScore",
+                    0,
+                ),
+
+                "method": (
+                    "ON1 local validation "
+                    "check ratio"
+                ),
+            },
+
+            "evidenceFingerprint": {
+                "algorithm": "SHA-256",
+
+                "value": fingerprint,
+
+                "scope": (
+                    "local backend "
+                    "evidence package"
+                ),
+            },
+
+            "integration": {
+                "physicalHardware": False,
+
+                "konnexVerified": False,
+
+                "onChainVerified": False,
+            },
+
+            "preparedAt": utc_now(),
+        }
+
+        return payload
+
+
+konnex_adapter = KonnexAdapter()
 
 
 # ============================================================
@@ -433,6 +654,16 @@ def save_mission_evidence(
             "onChainVerified": False,
         },
 
+        # Konnex-ready representation.
+        #
+        # This is an adapter payload only.
+        # It is NOT a Konnex submission or verification.
+        "konnexAdapter": (
+            konnex_adapter.build_submission_payload(
+                mission
+            )
+        ),
+
         "persistedAt": utc_now(),
     }
 
@@ -492,6 +723,35 @@ def update_mission_evidence_artifact(
                 "konnexVerified": False,
 
                 "onChainVerified": False,
+            },
+
+            "konnexAdapter": {
+                "adapter": {
+                    "name": "ON1 Konnex Adapter",
+                    "version": KONNEX_ADAPTER_VERSION,
+                    "status": KONNEX_ADAPTER_STATUS,
+                },
+
+                "submission": {
+                    "submittedToKonnex": False,
+
+                    "konnexVerified": False,
+
+                    "onChainVerified": False,
+                },
+
+                "evidenceFingerprint": {
+                    "algorithm": "SHA-256",
+
+                    "value": fingerprint,
+
+                    "scope": (
+                        "local backend "
+                        "evidence package"
+                    ),
+                },
+
+                "fingerprintedAt": utc_now(),
             },
 
             "fingerprintedAt": utc_now(),
@@ -865,8 +1125,7 @@ class MissionEngine:
 
         # Persist the complete mission evidence package.
         #
-        # This is separate from machine memory so the
-        # complete evidence trail remains available.
+        # This remains separate from machine memory.
         save_mission_evidence(
             mission
         )
@@ -1211,8 +1470,8 @@ def export_evidence(
 
         file.write("\n")
 
-    # Update the already-persisted mission evidence record
-    # with its exported artifact and fingerprint.
+    # Update the already-persisted mission evidence
+    # record with its exported artifact and fingerprint.
     mission = result.get(
         "mission",
         {}
@@ -1419,6 +1678,28 @@ def print_demo(
 
     print(
         f"  {fingerprint}"
+    )
+
+    print()
+
+    print("KONNEX ADAPTER")
+
+    print(
+        f"  Version: "
+        f"{KONNEX_ADAPTER_VERSION}"
+    )
+
+    print(
+        f"  Status: "
+        f"{KONNEX_ADAPTER_STATUS}"
+    )
+
+    print(
+        "  Submitted: False"
+    )
+
+    print(
+        "  Konnex verified: False"
     )
 
     print()
