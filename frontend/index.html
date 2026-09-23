@@ -10,26 +10,53 @@
 
   <meta
     name="description"
-    content="ON1 Physical AI — software-first machine intelligence infrastructure for identity, mission execution, telemetry, verifiable work evidence, validation, memory and reputation."
+    content="ON1 Physical AI — software-first machine intelligence infrastructure for machine identity, mission execution, telemetry, verifiable work evidence, validation, memory and reputation."
   >
 
-  <meta name="theme-color" content="#071018">
+  <meta
+    name="theme-color"
+    content="#071018"
+  >
 
-  <title>ON1 Physical AI — Machine Intelligence Infrastructure</title>
+  <meta
+    name="color-scheme"
+    content="dark"
+  >
+
+  <title>
+    ON1 Physical AI — Machine Intelligence Infrastructure
+  </title>
 
   <style>
     :root {
       --bg: #071018;
+      --bg-soft: #09131c;
       --panel: #0d1721;
       --panel-2: #101e2a;
+      --panel-3: #122432;
       --border: #1d3445;
+      --border-soft: rgba(255, 255, 255, 0.07);
+
       --text: #edf6fb;
       --muted: #8da5b5;
+      --muted-2: #688292;
+
       --accent: #39d9ff;
+      --accent-soft: rgba(57, 217, 255, 0.08);
+
       --success: #46e6a5;
+      --success-soft: rgba(70, 230, 165, 0.08);
+
       --warning: #ffd166;
+      --warning-soft: rgba(255, 209, 102, 0.08);
+
       --danger: #ff6b6b;
-      --shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+      --danger-soft: rgba(255, 107, 107, 0.08);
+
+      --shadow:
+        0 18px 50px rgba(0, 0, 0, 0.28);
+
+      --radius: 16px;
     }
 
     * {
@@ -38,34 +65,77 @@
 
     html {
       background: var(--bg);
+      scroll-behavior: smooth;
     }
 
     body {
       margin: 0;
       min-height: 100vh;
+
       background:
         radial-gradient(
-          circle at top right,
+          circle at 100% 0%,
           rgba(57, 217, 255, 0.08),
-          transparent 30%
+          transparent 28%
+        ),
+        radial-gradient(
+          circle at 0% 35%,
+          rgba(57, 217, 255, 0.035),
+          transparent 25%
         ),
         linear-gradient(
           180deg,
           #071018 0%,
           #08121a 100%
         );
+
       color: var(--text);
-      font-family: Arial, Helvetica, sans-serif;
+
+      font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+      line-height: 1.5;
+    }
+
+    button,
+    a {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button {
+      font: inherit;
     }
 
     .container {
-      width: min(1180px, calc(100% - 28px));
+      width: min(
+        1180px,
+        calc(100% - 28px)
+      );
+
       margin: 0 auto;
     }
 
+    /* =========================================================
+       HEADER
+       ========================================================= */
+
     header {
-      padding: 22px 0;
-      border-bottom: 1px solid var(--border);
+      padding: 20px 0;
+
+      border-bottom:
+        1px solid var(--border);
+
+      background:
+        rgba(7, 16, 24, 0.78);
+
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+
+      position: sticky;
+      top: 0;
+      z-index: 20;
     }
 
     .brand {
@@ -75,30 +145,68 @@
     }
 
     .logo {
-      width: 42px;
-      height: 42px;
-      border: 1px solid var(--accent);
-      border-radius: 12px;
+      width: 44px;
+      height: 44px;
+
       display: grid;
       place-items: center;
-      font-weight: 800;
+
+      overflow: hidden;
+
+      border:
+        1px solid rgba(
+          57,
+          217,
+          255,
+          0.45
+        );
+
+      border-radius: 12px;
+
+      background:
+        rgba(57, 217, 255, 0.05);
+
+      flex-shrink: 0;
+    }
+
+    .logo img {
+      width: 100%;
+      height: 100%;
+
+      display: block;
+
+      object-fit: contain;
+
+      padding: 4px;
+    }
+
+    .logo-fallback {
       color: var(--accent);
-      background: rgba(57, 217, 255, 0.06);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
     }
 
     .brand-title {
-      font-weight: 800;
       font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.2px;
     }
 
     .brand-subtitle {
+      margin-top: 2px;
+
       color: var(--muted);
+
       font-size: 12px;
-      margin-top: 3px;
     }
 
+    /* =========================================================
+       MAIN
+       ========================================================= */
+
     main {
-      padding: 34px 0 50px;
+      padding: 38px 0 54px;
     }
 
     .hero {
@@ -106,101 +214,177 @@
     }
 
     .eyebrow {
-      color: var(--accent);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
       margin-bottom: 10px;
+
+      color: var(--accent);
+
+      font-size: 11px;
+      font-weight: 800;
+
+      letter-spacing: 1.7px;
+
+      text-transform: uppercase;
     }
 
     h1 {
       margin: 0;
-      font-size: clamp(30px, 6vw, 48px);
-      line-height: 1.05;
+
+      max-width: 850px;
+
+      font-size:
+        clamp(
+          30px,
+          6vw,
+          50px
+        );
+
+      line-height: 1.04;
+
+      letter-spacing: -1.5px;
     }
 
     .hero p {
-      max-width: 760px;
+      max-width: 790px;
+
+      margin:
+        15px 0 0;
+
       color: var(--muted);
-      line-height: 1.65;
-      margin: 14px 0 0;
+
+      line-height: 1.7;
+
+      font-size: 15px;
     }
 
     .prototype-banner {
       margin-top: 22px;
-      padding: 15px 17px;
-      border: 1px solid var(--border);
+
+      padding:
+        15px 17px;
+
+      border:
+        1px solid var(--border);
+
       border-radius: 13px;
-      background: rgba(255, 255, 255, 0.025);
+
+      background:
+        rgba(255, 255, 255, 0.025);
+
       color: var(--muted);
-      line-height: 1.6;
+
       font-size: 13px;
+
+      line-height: 1.65;
     }
 
     .prototype-banner strong {
       color: var(--warning);
     }
 
+    /* =========================================================
+       LIVE DEMO
+       ========================================================= */
+
     .demo-card {
-      margin-top: 22px;
+      margin-top: 24px;
+
       padding: 22px;
-      border: 1px solid rgba(57, 217, 255, 0.25);
-      border-radius: 16px;
+
+      border:
+        1px solid
+        rgba(57, 217, 255, 0.24);
+
+      border-radius: var(--radius);
+
       background:
         linear-gradient(
           135deg,
           rgba(57, 217, 255, 0.07),
           rgba(255, 255, 255, 0.02)
         );
+
       box-shadow: var(--shadow);
     }
 
     .demo-content {
       display: flex;
+
       align-items: center;
+
       justify-content: space-between;
-      gap: 20px;
+
+      gap: 24px;
     }
 
     .demo-title {
+      margin-bottom: 7px;
+
       font-size: 18px;
       font-weight: 800;
-      margin-bottom: 7px;
     }
 
     .demo-text {
+      max-width: 720px;
+
       color: var(--muted);
-      line-height: 1.55;
+
       font-size: 13px;
-      max-width: 700px;
+
+      line-height: 1.6;
     }
 
     .demo-actions {
+      min-width: 215px;
+
       display: flex;
+
       flex-direction: column;
+
       gap: 9px;
+
       flex-shrink: 0;
-      min-width: 210px;
     }
 
     .demo-button {
+      min-height: 44px;
+
       display: inline-flex;
+
       align-items: center;
+
       justify-content: center;
-      padding: 12px 18px;
+
+      padding:
+        11px 18px;
+
+      border:
+        1px solid var(--accent);
+
       border-radius: 10px;
+
       background: var(--accent);
+
       color: #061018;
+
       text-decoration: none;
-      font-size: 14px;
+
+      font-size: 13px;
       font-weight: 800;
-      border: 1px solid var(--accent);
+
       cursor: pointer;
+
+      transition:
+        transform 0.15s ease,
+        filter 0.15s ease,
+        opacity 0.15s ease;
     }
 
     .demo-button:hover {
       filter: brightness(1.08);
+    }
+
+    .demo-button:active {
+      transform: translateY(1px);
     }
 
     .demo-button.secondary {
@@ -212,16 +396,35 @@
       opacity: 0.55;
       cursor: wait;
       filter: none;
+      transform: none;
     }
 
     .api-status {
-      margin-top: 16px;
-      padding: 12px 14px;
-      border: 1px solid var(--border);
+      margin-top: 17px;
+
+      min-height: 45px;
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 7px;
+
+      padding:
+        11px 14px;
+
+      border:
+        1px solid var(--border);
+
       border-radius: 11px;
-      background: rgba(255, 255, 255, 0.025);
-      font-size: 12px;
+
+      background:
+        rgba(255, 255, 255, 0.025);
+
       color: var(--muted);
+
+      font-size: 12px;
+
       line-height: 1.5;
     }
 
@@ -230,40 +433,90 @@
     }
 
     .api-indicator {
-      display: inline-block;
       width: 8px;
       height: 8px;
-      margin-right: 7px;
+
+      flex-shrink: 0;
+
       border-radius: 50%;
+
       background: var(--warning);
+
+      box-shadow:
+        0 0 0 3px
+        rgba(255, 209, 102, 0.08);
     }
 
     .api-indicator.online {
       background: var(--success);
+
+      box-shadow:
+        0 0 0 3px
+        rgba(70, 230, 165, 0.08);
     }
 
     .api-indicator.offline {
       background: var(--danger);
+
+      box-shadow:
+        0 0 0 3px
+        rgba(255, 107, 107, 0.08);
     }
+
+    .api-indicator.loading {
+      background: var(--accent);
+
+      animation:
+        pulse 1.2s infinite ease-in-out;
+
+      box-shadow:
+        0 0 0 3px
+        rgba(57, 217, 255, 0.08);
+    }
+
+    @keyframes pulse {
+      0%,
+      100% {
+        opacity: 0.45;
+      }
+
+      50% {
+        opacity: 1;
+      }
+    }
+
+    /* =========================================================
+       GRID / CARDS
+       ========================================================= */
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(12, 1fr);
+
+      grid-template-columns:
+        repeat(12, 1fr);
+
       gap: 16px;
+
       margin-top: 22px;
     }
 
     .card {
       grid-column: span 6;
+
+      padding: 20px;
+
+      border:
+        1px solid var(--border);
+
+      border-radius: var(--radius);
+
       background:
         linear-gradient(
           180deg,
           var(--panel),
           #0a151e
         );
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 20px;
+
       box-shadow: var(--shadow);
     }
 
@@ -272,88 +525,132 @@
     }
 
     .card h2 {
-      margin: 0 0 16px;
+      margin:
+        0 0 16px;
+
       font-size: 17px;
+      line-height: 1.25;
     }
 
     .section-label {
-      color: var(--muted);
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
       margin-bottom: 6px;
+
+      color: var(--muted);
+
+      font-size: 10px;
+      font-weight: 700;
+
+      letter-spacing: 1px;
+
+      text-transform: uppercase;
     }
 
     .machine-id {
       font-size: 21px;
       font-weight: 800;
+
+      letter-spacing: -0.3px;
     }
+
+    /* =========================================================
+       METRICS
+       ========================================================= */
+
+    .metric-grid {
+      display: grid;
+
+      grid-template-columns:
+        repeat(4, 1fr);
+
+      gap: 10px;
+    }
+
+    .metric {
+      min-height: 88px;
+
+      padding: 13px;
+
+      background:
+        var(--panel-2);
+
+      border:
+        1px solid var(--border);
+
+      border-radius: 10px;
+    }
+
+    .metric-value {
+      overflow: hidden;
+
+      text-overflow: ellipsis;
+
+      font-size: 20px;
+      font-weight: 800;
+
+      white-space: nowrap;
+    }
+
+    .metric-label {
+      margin-top: 5px;
+
+      color: var(--muted);
+
+      font-size: 10px;
+      line-height: 1.35;
+
+      letter-spacing: 0.4px;
+    }
+
+    /* =========================================================
+       STATUS
+       ========================================================= */
 
     .status {
       display: inline-flex;
+
       align-items: center;
+
       gap: 7px;
-      margin-top: 9px;
-      padding: 7px 10px;
+
+      margin-top: 11px;
+
+      padding:
+        7px 10px;
+
+      border:
+        1px solid var(--border);
+
       border-radius: 999px;
-      border: 1px solid var(--border);
+
+      background:
+        rgba(255, 255, 255, 0.018);
+
       color: var(--muted);
+
       font-size: 12px;
+      font-weight: 700;
     }
 
     .status-dot {
       width: 7px;
       height: 7px;
+
       border-radius: 50%;
+
       background: var(--success);
     }
 
-    .metric-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
+    .status-dot.warning {
+      background: var(--warning);
     }
 
-    .metric {
-      padding: 13px;
-      background: var(--panel-2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
+    .status-dot.danger {
+      background: var(--danger);
     }
 
-    .metric-value {
-      font-size: 20px;
-      font-weight: 800;
-    }
-
-    .metric-label {
-      color: var(--muted);
-      font-size: 11px;
-      margin-top: 5px;
-    }
-
-    .architecture {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
-    }
-
-    .architecture-step {
-      padding: 15px 12px;
-      text-align: center;
-      background: var(--panel-2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .architecture-step span {
-      display: block;
-      color: var(--accent);
-      margin-bottom: 7px;
-      font-size: 11px;
-    }
+    /* =========================================================
+       LISTS
+       ========================================================= */
 
     .list {
       display: grid;
@@ -362,8 +659,13 @@
 
     .list-item {
       padding: 13px;
-      background: var(--panel-2);
-      border: 1px solid var(--border);
+
+      background:
+        var(--panel-2);
+
+      border:
+        1px solid var(--border);
+
       border-radius: 10px;
     }
 
@@ -373,9 +675,12 @@
 
     .list-meta {
       margin-top: 5px;
+
       color: var(--muted);
+
       font-size: 12px;
-      line-height: 1.5;
+
+      line-height: 1.55;
     }
 
     .verified {
@@ -388,24 +693,191 @@
       font-weight: 800;
     }
 
-    .api-note {
-      margin-top: 10px;
-      color: var(--muted);
-      font-size: 11px;
-      line-height: 1.5;
+    .danger {
+      color: var(--danger);
+      font-weight: 800;
     }
 
-    footer {
-      padding: 24px 0 34px;
-      border-top: 1px solid var(--border);
+    .neutral {
       color: var(--muted);
+      font-weight: 700;
+    }
+
+    /* =========================================================
+       ARCHITECTURE
+       ========================================================= */
+
+    .architecture {
+      display: grid;
+
+      grid-template-columns:
+        repeat(5, 1fr);
+
+      gap: 10px;
+    }
+
+    .architecture-step {
+      min-height: 76px;
+
+      display: flex;
+
+      flex-direction: column;
+
+      align-items: center;
+
+      justify-content: center;
+
+      padding:
+        13px 10px;
+
+      text-align: center;
+
+      background:
+        var(--panel-2);
+
+      border:
+        1px solid var(--border);
+
+      border-radius: 10px;
+
       font-size: 12px;
+      font-weight: 700;
+    }
+
+    .architecture-step span {
+      display: block;
+
+      margin-bottom: 7px;
+
+      color: var(--accent);
+
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    /* =========================================================
+       LIVE DATA INDICATOR
+       ========================================================= */
+
+    .data-source {
+      display: inline-flex;
+
+      align-items: center;
+
+      gap: 6px;
+
+      margin-top: 8px;
+
+      padding:
+        4px 8px;
+
+      border:
+        1px solid var(--border);
+
+      border-radius: 999px;
+
+      color: var(--muted-2);
+
+      font-size: 10px;
+
+      font-weight: 700;
+
+      text-transform: uppercase;
+
+      letter-spacing: 0.5px;
+    }
+
+    .data-source::before {
+      content: "";
+
+      width: 5px;
+      height: 5px;
+
+      border-radius: 50%;
+
+      background: var(--success);
+    }
+
+    /* =========================================================
+       NOTES
+       ========================================================= */
+
+    .api-note {
+      margin-top: 10px;
+
+      color: var(--muted);
+
+      font-size: 11px;
+
+      line-height: 1.55;
+    }
+
+    .empty-state {
+      color: var(--muted);
+    }
+
+    /* =========================================================
+       FOOTER
+       ========================================================= */
+
+    footer {
+      padding:
+        24px 0 34px;
+
+      border-top:
+        1px solid var(--border);
+
+      color: var(--muted);
+
+      font-size: 12px;
+
       text-align: center;
     }
 
+    footer strong {
+      color: var(--text);
+    }
+
+    /* =========================================================
+       ACCESSIBILITY
+       ========================================================= */
+
+    button:focus-visible,
+    a:focus-visible {
+      outline:
+        2px solid var(--accent);
+
+      outline-offset: 3px;
+    }
+
+    /* =========================================================
+       RESPONSIVE
+       ========================================================= */
+
+    @media (max-width: 900px) {
+      .metric-grid {
+        grid-template-columns:
+          repeat(2, 1fr);
+      }
+
+      .architecture {
+        grid-template-columns:
+          repeat(2, 1fr);
+      }
+    }
+
     @media (max-width: 800px) {
+      header {
+        position: static;
+      }
+
+      main {
+        padding-top: 30px;
+      }
+
       .demo-content {
         flex-direction: column;
+
         align-items: stretch;
       }
 
@@ -417,17 +889,50 @@
         width: 100%;
       }
 
+      .card,
+      .card.full {
+        grid-column: span 12;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .container {
+        width:
+          min(
+            100% - 20px,
+            1180px
+          );
+      }
+
+      .brand-title {
+        font-size: 15px;
+      }
+
+      .brand-subtitle {
+        font-size: 11px;
+      }
+
+      .logo {
+        width: 40px;
+        height: 40px;
+      }
+
+      h1 {
+        font-size: 32px;
+      }
+
       .metric-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns:
+          repeat(2, 1fr);
       }
 
       .architecture {
         grid-template-columns: 1fr;
       }
 
-      .card,
-      .card.full {
-        grid-column: span 12;
+      .demo-card,
+      .card {
+        padding: 17px;
       }
     }
   </style>
@@ -435,10 +940,30 @@
 
 <body>
 
+  <!-- =========================================================
+       HEADER
+       ========================================================= -->
+
   <header>
     <div class="container">
+
       <div class="brand">
-        <div class="logo">ON1</div>
+
+        <div class="logo">
+          <img
+            src="dsatechon1-logo.jpg"
+            alt="DSATECHON1 logo"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+          >
+
+          <span
+            class="logo-fallback"
+            style="display:none;"
+            aria-hidden="true"
+          >
+            ON1
+          </span>
+        </div>
 
         <div>
           <div class="brand-title">
@@ -449,14 +974,24 @@
             Machine Intelligence Infrastructure
           </div>
         </div>
+
       </div>
+
     </div>
   </header>
+
+
+  <!-- =========================================================
+       MAIN
+       ========================================================= -->
 
   <main>
     <div class="container">
 
+      <!-- HERO -->
+
       <section class="hero">
+
         <div class="eyebrow">
           Software-First Physical AI Prototype
         </div>
@@ -466,34 +1001,42 @@
         </h1>
 
         <p>
-          Building a software foundation for machine identity,
-          mission execution, verifiable work evidence, validation,
-          machine memory, and reputation.
+          A software foundation for machine identity,
+          mission execution, telemetry, verifiable work
+          evidence, validation, machine memory, and reputation.
         </p>
 
         <div class="prototype-banner">
           <strong>Prototype status:</strong>
-          ON1 Physical AI currently uses a software-simulated machine.
-          The prototype does not yet control physical hardware and is
-          not connected to the live Konnex network.
+          ON1 Physical AI currently operates with a
+          software-simulated machine. The prototype does not
+          yet control physical hardware and is not connected
+          to the live Konnex network or an on-chain verification
+          layer.
         </div>
+
       </section>
 
+
+      <!-- LIVE INFRASTRUCTURE -->
 
       <section class="demo-card">
 
         <div class="demo-content">
 
           <div>
+
             <div class="demo-title">
               Live Mission Infrastructure
             </div>
 
             <div class="demo-text">
-              The ON1 Physical AI backend is deployed as a live API.
-              You can inspect the current machine state or deliberately
-              execute a software-simulated mission through the API.
+              The ON1 Physical AI backend is deployed as a
+              live API. Inspect the current machine state,
+              launch a software-simulated mission, or open
+              the dedicated browser simulator.
             </div>
+
           </div>
 
 
@@ -527,14 +1070,22 @@
         </div>
 
 
-        <div class="api-status">
+        <div
+          id="apiStatus"
+          class="api-status"
+          role="status"
+          aria-live="polite"
+        >
 
           <span
             id="apiIndicator"
-            class="api-indicator"
+            class="api-indicator loading"
+            aria-hidden="true"
           ></span>
 
-          <strong>Live API:</strong>
+          <strong>
+            Live API:
+          </strong>
 
           <span id="apiStatusText">
             Connecting to ON1 Physical AI backend...
@@ -544,6 +1095,10 @@
 
       </section>
 
+
+      <!-- =====================================================
+           DASHBOARD GRID
+           ===================================================== -->
 
       <section class="grid">
 
@@ -559,6 +1114,7 @@
           <div class="metric-grid">
 
             <div class="metric">
+
               <div
                 id="registeredMachines"
                 class="metric-value"
@@ -569,10 +1125,12 @@
               <div class="metric-label">
                 REGISTERED MACHINE
               </div>
+
             </div>
 
 
             <div class="metric">
+
               <div
                 id="missionsExecuted"
                 class="metric-value"
@@ -583,10 +1141,12 @@
               <div class="metric-label">
                 MISSIONS EXECUTED
               </div>
+
             </div>
 
 
             <div class="metric">
+
               <div
                 id="verifiedWork"
                 class="metric-value"
@@ -597,10 +1157,12 @@
               <div class="metric-label">
                 VERIFIED WORK
               </div>
+
             </div>
 
 
             <div class="metric">
+
               <div
                 id="networkState"
                 class="metric-value"
@@ -611,13 +1173,20 @@
               <div class="metric-label">
                 NETWORK STATE
               </div>
+
             </div>
 
           </div>
 
+
           <div class="api-note">
-            Live metrics are supplied by the ON1 Physical AI backend API.
-            They represent the current software-simulated machine state.
+            Live metrics are read from the ON1 Physical AI
+            backend. They represent the current state of the
+            software-simulated machine.
+          </div>
+
+          <div class="data-source">
+            Live Backend Data
           </div>
 
         </article>
@@ -632,7 +1201,7 @@
           </h2>
 
           <div class="section-label">
-            Machine
+            Machine Model
           </div>
 
           <div
@@ -731,7 +1300,17 @@
                   id="missionScore"
                   class="verified"
                 >
-                  100/100
+                  —
+                </strong>
+              </div>
+
+              <div class="list-meta">
+                Mission Result:
+                <strong
+                  id="missionResult"
+                  class="neutral"
+                >
+                  No mission executed yet
                 </strong>
               </div>
 
@@ -766,9 +1345,9 @@
                 Checks passed:
                 <strong
                   id="validationChecks"
-                  class="verified"
+                  class="neutral"
                 >
-                  6/6
+                  —
                 </strong>
               </div>
 
@@ -776,9 +1355,9 @@
                 Result:
                 <strong
                   id="validationResult"
-                  class="verified"
+                  class="neutral"
                 >
-                  VERIFIED
+                  NOT RUN
                 </strong>
               </div>
 
@@ -814,7 +1393,7 @@
                   id="reputationScore"
                   class="verified"
                 >
-                  50/100
+                  —
                 </strong>
               </div>
 
@@ -899,11 +1478,97 @@
               </div>
 
               <div class="list-meta">
-                The live machine has not recorded a mission memory.
+                The live machine has not recorded a mission
+                memory.
               </div>
 
             </div>
 
+          </div>
+
+        </article>
+
+
+        <!-- SYSTEM STATE -->
+
+        <article class="card full">
+
+          <h2>
+            Integration Status
+          </h2>
+
+          <div class="metric-grid">
+
+            <div class="metric">
+
+              <div
+                id="hardwareStatus"
+                class="metric-value"
+              >
+                NO
+              </div>
+
+              <div class="metric-label">
+                PHYSICAL HARDWARE
+              </div>
+
+            </div>
+
+
+            <div class="metric">
+
+              <div
+                id="konnexStatus"
+                class="metric-value"
+              >
+                NO
+              </div>
+
+              <div class="metric-label">
+                KONNEX INTEGRATION
+              </div>
+
+            </div>
+
+
+            <div class="metric">
+
+              <div
+                id="chainStatus"
+                class="metric-value"
+              >
+                NO
+              </div>
+
+              <div class="metric-label">
+                ON-CHAIN VERIFICATION
+              </div>
+
+            </div>
+
+
+            <div class="metric">
+
+              <div
+                id="memoryCount"
+                class="metric-value"
+              >
+                0
+              </div>
+
+              <div class="metric-label">
+                MEMORY RECORDS
+              </div>
+
+            </div>
+
+          </div>
+
+          <div class="api-note">
+            These integration indicators reflect the current
+            backend state. Future physical hardware, Konnex,
+            and on-chain components can be connected without
+            changing the machine identity model.
           </div>
 
         </article>
@@ -914,217 +1579,498 @@
   </main>
 
 
+  <!-- =========================================================
+       FOOTER
+       ========================================================= -->
+
   <footer>
-    ON1 Physical AI — A DSATECHON1 initiative
+    <div class="container">
+      ON1 Physical AI — <strong>A DSATECHON1 initiative</strong>
+    </div>
   </footer>
 
 
+  <!-- =========================================================
+       APPLICATION LOGIC
+       ========================================================= -->
+
   <script>
+    "use strict";
+
+
+    /*
+     * ==========================================================
+     * ON1 PHYSICAL AI FRONTEND CONFIGURATION
+     * ==========================================================
+     *
+     * The backend contract is intentionally kept simple:
+     *
+     * GET  /robot
+     * POST /missions
+     *
+     * Do not change /missions to /run-mission.
+     */
+
     const API_BASE =
       "https://on1-physical-ai-api.onrender.com";
 
+    const ROBOT_ENDPOINT =
+      `${API_BASE}/robot`;
+
+    const MISSION_ENDPOINT =
+      `${API_BASE}/missions`;
+
+    const REQUEST_TIMEOUT_MS =
+      30000;
+
+
+    /*
+     * ==========================================================
+     * DOM REFERENCES
+     * ==========================================================
+     */
 
     const elements = {
+
       apiIndicator:
-        document.getElementById("apiIndicator"),
+        document.getElementById(
+          "apiIndicator"
+        ),
 
       apiStatusText:
-        document.getElementById("apiStatusText"),
+        document.getElementById(
+          "apiStatusText"
+        ),
 
       runMissionButton:
-        document.getElementById("runMissionButton"),
+        document.getElementById(
+          "runMissionButton"
+        ),
 
       refreshButton:
-        document.getElementById("refreshButton"),
+        document.getElementById(
+          "refreshButton"
+        ),
 
       registeredMachines:
-        document.getElementById("registeredMachines"),
+        document.getElementById(
+          "registeredMachines"
+        ),
 
       missionsExecuted:
-        document.getElementById("missionsExecuted"),
+        document.getElementById(
+          "missionsExecuted"
+        ),
 
       verifiedWork:
-        document.getElementById("verifiedWork"),
+        document.getElementById(
+          "verifiedWork"
+        ),
 
       networkState:
-        document.getElementById("networkState"),
+        document.getElementById(
+          "networkState"
+        ),
 
       machineModel:
-        document.getElementById("machineModel"),
+        document.getElementById(
+          "machineModel"
+        ),
 
       robotId:
-        document.getElementById("robotId"),
+        document.getElementById(
+          "robotId"
+        ),
 
       machineIdentity:
-        document.getElementById("machineIdentity"),
+        document.getElementById(
+          "machineIdentity"
+        ),
 
       machineStatus:
-        document.getElementById("machineStatus"),
+        document.getElementById(
+          "machineStatus"
+        ),
 
       machineStatusDot:
-        document.getElementById("machineStatusDot"),
+        document.getElementById(
+          "machineStatusDot"
+        ),
 
       latestMissionRobot:
-        document.getElementById("latestMissionRobot"),
+        document.getElementById(
+          "latestMissionRobot"
+        ),
 
       missionRoute:
-        document.getElementById("missionRoute"),
+        document.getElementById(
+          "missionRoute"
+        ),
 
       missionScore:
-        document.getElementById("missionScore"),
+        document.getElementById(
+          "missionScore"
+        ),
+
+      missionResult:
+        document.getElementById(
+          "missionResult"
+        ),
 
       validationChecks:
-        document.getElementById("validationChecks"),
+        document.getElementById(
+          "validationChecks"
+        ),
 
       validationResult:
-        document.getElementById("validationResult"),
+        document.getElementById(
+          "validationResult"
+        ),
 
       reputationRobot:
-        document.getElementById("reputationRobot"),
+        document.getElementById(
+          "reputationRobot"
+        ),
 
       reputationScore:
-        document.getElementById("reputationScore"),
+        document.getElementById(
+          "reputationScore"
+        ),
 
       successfulMissions:
-        document.getElementById("successfulMissions"),
+        document.getElementById(
+          "successfulMissions"
+        ),
 
       failedMissions:
-        document.getElementById("failedMissions"),
+        document.getElementById(
+          "failedMissions"
+        ),
 
       machineMemory:
-        document.getElementById("machineMemory")
+        document.getElementById(
+          "machineMemory"
+        ),
+
+      hardwareStatus:
+        document.getElementById(
+          "hardwareStatus"
+        ),
+
+      konnexStatus:
+        document.getElementById(
+          "konnexStatus"
+        ),
+
+      chainStatus:
+        document.getElementById(
+          "chainStatus"
+        ),
+
+      memoryCount:
+        document.getElementById(
+          "memoryCount"
+        )
     };
 
 
-    function setApiStatus(state, message) {
+    /*
+     * ==========================================================
+     * STATE
+     * ==========================================================
+     */
+
+    let latestRobotState = null;
+    let missionInProgress = false;
+
+
+    /*
+     * ==========================================================
+     * GENERAL HELPERS
+     * ==========================================================
+     */
+
+    function escapeHtml(value) {
+
+      if (
+        value === null ||
+        value === undefined
+      ) {
+        return "";
+      }
+
+      return String(value)
+        .replace(
+          /&/g,
+          "&amp;"
+        )
+        .replace(
+          /</g,
+          "&lt;"
+        )
+        .replace(
+          />/g,
+          "&gt;"
+        )
+        .replace(
+          /"/g,
+          "&quot;"
+        )
+        .replace(
+          /'/g,
+          "&#039;"
+        );
+    }
+
+
+    function numberOrZero(value) {
+
+      const number =
+        Number(value);
+
+      return Number.isFinite(number)
+        ? number
+        : 0;
+    }
+
+
+    function hasValue(value) {
+
+      return (
+        value !== null &&
+        value !== undefined &&
+        value !== ""
+      );
+    }
+
+
+    function formatPoint(point) {
+
+      if (!hasValue(point)) {
+        return "";
+      }
+
+
+      if (
+        Array.isArray(point) &&
+        point.length >= 2
+      ) {
+
+        return (
+          `(${point[0]},${point[1]})`
+        );
+      }
+
+
+      if (
+        typeof point === "object" &&
+        point.x !== undefined &&
+        point.y !== undefined
+      ) {
+
+        return (
+          `(${point.x},${point.y})`
+        );
+      }
+
+
+      return String(point);
+    }
+
+
+    function formatBooleanState(value) {
+
+      return value === true
+        ? "YES"
+        : "NO";
+    }
+
+
+    function setText(element, value) {
+
+      if (element) {
+        element.textContent =
+          value;
+      }
+    }
+
+
+    /*
+     * ==========================================================
+     * API STATUS
+     * ==========================================================
+     */
+
+    function setApiStatus(
+      state,
+      message
+    ) {
 
       elements.apiIndicator.className =
         "api-indicator";
 
-      if (state === "online") {
-        elements.apiIndicator.classList.add("online");
+      if (
+        state === "online"
+      ) {
+
+        elements.apiIndicator.classList.add(
+          "online"
+        );
+
+      } else if (
+        state === "offline"
+      ) {
+
+        elements.apiIndicator.classList.add(
+          "offline"
+        );
+
+      } else {
+
+        elements.apiIndicator.classList.add(
+          "loading"
+        );
       }
 
-      if (state === "offline") {
-        elements.apiIndicator.classList.add("offline");
-      }
 
       elements.apiStatusText.textContent =
         message;
     }
 
 
-    function escapeHtml(value) {
+    /*
+     * ==========================================================
+     * FETCH WITH TIMEOUT
+     * ==========================================================
+     */
 
-      if (value === null || value === undefined) {
-        return "";
+    async function fetchWithTimeout(
+      url,
+      options = {}
+    ) {
+
+      const controller =
+        new AbortController();
+
+      const timeoutId =
+        setTimeout(
+          () => controller.abort(),
+          REQUEST_TIMEOUT_MS
+        );
+
+
+      try {
+
+        return await fetch(
+          url,
+          {
+            ...options,
+            signal:
+              controller.signal
+          }
+        );
+
+      } finally {
+
+        clearTimeout(
+          timeoutId
+        );
       }
-
-      return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
     }
 
 
-    function updateDashboard(robot) {
+    /*
+     * ==========================================================
+     * MACHINE STATUS
+     * ==========================================================
+     */
 
-      if (!robot) {
-        return;
-      }
+    function updateMachineStatus(
+      status
+    ) {
 
-
-      elements.registeredMachines.textContent =
-        "1";
-
-
-      elements.missionsExecuted.textContent =
-        Number(robot.missionCount || 0);
-
-
-      elements.verifiedWork.textContent =
-        Number(robot.successfulMissions || 0);
+      const normalized =
+        String(
+          status || "IDLE"
+        ).toUpperCase();
 
 
-      elements.networkState.textContent =
-        "API";
+      setText(
+        elements.machineStatus,
+        normalized
+      );
 
 
-      elements.machineModel.textContent =
-        robot.model || "ON1 Virtual Navigator";
-
-
-      elements.robotId.textContent =
-        robot.robotId || "ON1-R001";
-
-
-      elements.machineIdentity.textContent =
-        robot.identity || "ON1-MACHINE-001";
-
-
-      elements.machineStatus.textContent =
-        robot.status || "IDLE";
-
-
-      elements.latestMissionRobot.textContent =
-        robot.robotId || "ON1-R001";
-
-
-      elements.reputationRobot.textContent =
-        robot.robotId || "ON1-R001";
-
-
-      elements.reputationScore.textContent =
-        `${Number(robot.reputationScore || 0)}/100`;
-
-
-      elements.successfulMissions.textContent =
-        Number(robot.successfulMissions || 0);
-
-
-      elements.failedMissions.textContent =
-        Number(robot.failedMissions || 0);
+      elements.machineStatusDot.className =
+        "status-dot";
 
 
       if (
-        Number(robot.successfulMissions || 0) > 0
+        normalized.includes("FAIL") ||
+        normalized.includes("ERROR") ||
+        normalized.includes("OFFLINE")
       ) {
 
-        elements.validationChecks.textContent =
-          "6/6";
+        elements.machineStatusDot.classList.add(
+          "danger"
+        );
 
-        elements.validationResult.textContent =
-          "VERIFIED";
+      } else if (
+        normalized.includes("RUN") ||
+        normalized.includes("MISSION") ||
+        normalized.includes("BUSY")
+      ) {
 
-        elements.missionScore.textContent =
-          "100/100";
+        elements.machineStatusDot.classList.add(
+          "warning"
+        );
       }
-
-
-      renderMachineMemory(robot.memory);
     }
 
 
-    function renderMachineMemory(memory) {
+    /*
+     * ==========================================================
+     * MACHINE MEMORY
+     * ==========================================================
+     */
 
-      if (!Array.isArray(memory) || memory.length === 0) {
+    function renderMachineMemory(
+      memory
+    ) {
+
+      if (
+        !Array.isArray(memory) ||
+        memory.length === 0
+      ) {
 
         elements.machineMemory.innerHTML = `
           <div class="list-item">
+
             <div class="list-title">
               No mission memory yet
             </div>
 
             <div class="list-meta">
-              The live machine has not recorded a mission memory.
+              The live machine has not recorded a
+              mission memory.
             </div>
+
           </div>
         `;
 
+        setText(
+          elements.memoryCount,
+          "0"
+        );
+
         return;
       }
+
+
+      setText(
+        elements.memoryCount,
+        String(memory.length)
+      );
 
 
       const latest =
@@ -1132,16 +2078,62 @@
 
 
       const result =
-        latest.result ||
-        latest.status ||
-        "Verified";
+        latest.result ??
+        latest.status ??
+        "Recorded";
+
+
+      const task =
+        latest.taskType ??
+        latest.task ??
+        "Navigation";
 
 
       const score =
-        latest.score ??
-        latest.validationScore ??
+        latest.powpScore ??
         latest.poPWScore ??
-        100;
+        latest.validationScore ??
+        latest.score;
+
+
+      const memoryId =
+        latest.memoryId ??
+        latest.id ??
+        "Latest";
+
+
+      const recordedAt =
+        latest.recordedAt ??
+        latest.timestamp;
+
+
+      let recordedText =
+        "";
+
+
+      if (recordedAt) {
+
+        try {
+
+          const date =
+            new Date(
+              recordedAt
+            );
+
+          if (
+            !Number.isNaN(
+              date.getTime()
+            )
+          ) {
+
+            recordedText =
+              date.toLocaleString();
+          }
+
+        } catch (_) {
+          recordedText = "";
+        }
+      }
 
 
       elements.machineMemory.innerHTML = `
@@ -1149,14 +2141,12 @@
 
           <div class="list-title">
             Mission Memory
+            (${escapeHtml(memoryId)})
           </div>
 
           <div class="list-meta">
-            Robot:
-            ${escapeHtml(
-              latest.robotId ||
-              "ON1-R001"
-            )}
+            Task:
+            ${escapeHtml(task)}
           </div>
 
           <div class="list-meta">
@@ -1166,17 +2156,493 @@
             </strong>
           </div>
 
-          <div class="list-meta">
-            PoPW-style Score:
-            <strong class="verified">
-              ${escapeHtml(score)}/100
-            </strong>
-          </div>
+          ${
+            hasValue(score)
+              ? `
+                <div class="list-meta">
+                  PoPW-style Score:
+                  <strong class="verified">
+                    ${escapeHtml(score)}/100
+                  </strong>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            recordedText
+              ? `
+                <div class="list-meta">
+                  Recorded:
+                  ${escapeHtml(recordedText)}
+                </div>
+              `
+              : ""
+          }
 
         </div>
       `;
     }
 
+
+    /*
+     * ==========================================================
+     * DASHBOARD UPDATE
+     * ==========================================================
+     */
+
+    function updateDashboard(
+      robot
+    ) {
+
+      if (!robot) {
+        return;
+      }
+
+
+      latestRobotState =
+        robot;
+
+
+      /*
+       * Machine overview
+       */
+
+      setText(
+        elements.registeredMachines,
+        "1"
+      );
+
+
+      setText(
+        elements.missionsExecuted,
+        String(
+          numberOrZero(
+            robot.missionCount
+          )
+        )
+      );
+
+
+      setText(
+        elements.verifiedWork,
+        String(
+          numberOrZero(
+            robot.successfulMissions
+          )
+        )
+      );
+
+
+      setText(
+        elements.networkState,
+        "API"
+      );
+
+
+      /*
+       * Machine identity
+       */
+
+      setText(
+        elements.machineModel,
+        robot.model ||
+        "ON1 Virtual Navigator"
+      );
+
+
+      setText(
+        elements.robotId,
+        robot.robotId ||
+        "ON1-R001"
+      );
+
+
+      setText(
+        elements.machineIdentity,
+        robot.identity ||
+        "ON1-MACHINE-001"
+      );
+
+
+      updateMachineStatus(
+        robot.status
+      );
+
+
+      /*
+       * Reputation
+       *
+       * Important:
+       * This value comes from the live backend.
+       * We do not hardcode the Firebase reputation.
+       */
+
+      setText(
+        elements.reputationRobot,
+        robot.robotId ||
+        "ON1-R001"
+      );
+
+
+      if (
+        hasValue(
+          robot.reputationScore
+        )
+      ) {
+
+        setText(
+          elements.reputationScore,
+          `${numberOrZero(
+            robot.reputationScore
+          )}/100`
+        );
+
+      } else {
+
+        setText(
+          elements.reputationScore,
+          "—"
+        );
+      }
+
+
+      setText(
+        elements.successfulMissions,
+        String(
+          numberOrZero(
+            robot.successfulMissions
+          )
+        )
+      );
+
+
+      setText(
+        elements.failedMissions,
+        String(
+          numberOrZero(
+            robot.failedMissions
+          )
+        )
+      );
+
+
+      /*
+       * Backend integration state
+       */
+
+      setText(
+        elements.hardwareStatus,
+        formatBooleanState(
+          robot.hardwareConnected
+        )
+      );
+
+
+      setText(
+        elements.konnexStatus,
+        formatBooleanState(
+          robot.konnexIntegrated
+        )
+      );
+
+
+      setText(
+        elements.chainStatus,
+        formatBooleanState(
+          robot.onChainVerified
+        )
+      );
+
+
+      /*
+       * Persistent machine memory
+       */
+
+      renderMachineMemory(
+        robot.memory
+      );
+    }
+
+
+    /*
+     * ==========================================================
+     * LATEST MISSION
+     * ==========================================================
+     */
+
+    function updateLatestMission(
+      mission
+    ) {
+
+      if (!mission) {
+        return;
+      }
+
+
+      /*
+       * Machine
+       */
+
+      if (
+        hasValue(
+          mission.robotId
+        )
+      ) {
+
+        setText(
+          elements.latestMissionRobot,
+          mission.robotId
+        );
+      }
+
+
+      /*
+       * Route
+       *
+       * The frontend accepts the route shapes already
+       * supported by the current backend output without
+       * changing the backend contract.
+       */
+
+      let routeText = "";
+
+
+      if (
+        typeof mission.route === "string"
+      ) {
+
+        routeText =
+          mission.route;
+
+      } else if (
+        mission.route &&
+        mission.route.start &&
+        mission.route.end
+      ) {
+
+        routeText =
+          `${formatPoint(
+            mission.route.start
+          )} → ${formatPoint(
+            mission.route.end
+          )}`;
+
+      } else if (
+        mission.start &&
+        mission.target
+      ) {
+
+        routeText =
+          `${formatPoint(
+            mission.start
+          )} → ${formatPoint(
+            mission.target
+          )}`;
+      }
+
+
+      if (routeText) {
+
+        setText(
+          elements.missionRoute,
+          routeText
+        );
+      }
+
+
+      /*
+       * Validation / PoPW-style score
+       */
+
+      const score =
+        mission.powpScore ??
+        mission.poPWScore ??
+        mission.validationScore ??
+        mission.score;
+
+
+      if (
+        hasValue(score)
+      ) {
+
+        setText(
+          elements.missionScore,
+          `${numberOrZero(score)}/100`
+        );
+      }
+
+
+      /*
+       * Mission result
+       */
+
+      const missionStatus =
+        mission.status ??
+        mission.result ??
+        mission.missionStatus;
+
+
+      if (
+        hasValue(
+          missionStatus
+        )
+      ) {
+
+        const normalized =
+          String(
+            missionStatus
+          ).toUpperCase();
+
+
+        setText(
+          elements.missionResult,
+          normalized
+        );
+
+
+        elements.missionResult.className =
+          normalized.includes("FAIL")
+            ? "danger"
+            : normalized.includes("VERIF")
+              ? "verified"
+              : "neutral";
+      }
+
+
+      /*
+       * Validator result
+       *
+       * Supports the validatorResult structure produced
+       * by the existing mission engine.
+       */
+
+      const validator =
+        mission.validatorResult;
+
+
+      if (validator) {
+
+        const passed =
+          validator.passedChecks ??
+          validator.checksPassed;
+
+        const total =
+          validator.totalChecks ??
+          validator.checksTotal;
+
+
+        if (
+          hasValue(passed) &&
+          hasValue(total)
+        ) {
+
+          setText(
+            elements.validationChecks,
+            `${passed}/${total}`
+          );
+        }
+
+
+        if (
+          validator.verified !== undefined
+        ) {
+
+          const verified =
+            Boolean(
+              validator.verified
+            );
+
+
+          setText(
+            elements.validationResult,
+            verified
+              ? "VERIFIED"
+              : "FAILED"
+          );
+
+
+          elements.validationResult.className =
+            verified
+              ? "verified"
+              : "danger";
+        }
+      }
+
+
+      /*
+       * Some mission responses may expose validation
+       * using a dedicated validation object. Support it
+       * without requiring it.
+       */
+
+      if (
+        mission.validation
+      ) {
+
+        const validation =
+          mission.validation;
+
+
+        const passed =
+          validation.passed ??
+          validation.checksPassed;
+
+
+        const total =
+          validation.total ??
+          validation.checksTotal;
+
+
+        if (
+          hasValue(passed) &&
+          hasValue(total)
+        ) {
+
+          setText(
+            elements.validationChecks,
+            `${passed}/${total}`
+          );
+        }
+
+
+        const result =
+          validation.result ??
+          validation.status;
+
+
+        if (
+          hasValue(result)
+        ) {
+
+          const normalized =
+            String(
+              result
+            ).toUpperCase();
+
+
+          setText(
+            elements.validationResult,
+            normalized
+          );
+
+
+          elements.validationResult.className =
+            normalized.includes("FAIL")
+              ? "danger"
+              : normalized.includes("VERIF")
+                ? "verified"
+                : "neutral";
+        }
+      }
+    }
+
+
+    /*
+     * ==========================================================
+     * FETCH ROBOT
+     * ==========================================================
+     */
 
     async function fetchRobotData() {
 
@@ -1186,19 +2652,28 @@
       );
 
 
+      elements.refreshButton.disabled =
+        true;
+
+
       try {
 
         const response =
-          await fetch(
-            `${API_BASE}/robot`,
+          await fetchWithTimeout(
+            ROBOT_ENDPOINT,
             {
               method: "GET",
-              cache: "no-store"
+              cache: "no-store",
+              headers: {
+                "Accept":
+                  "application/json"
+              }
             }
           );
 
 
         if (!response.ok) {
+
           throw new Error(
             `API returned HTTP ${response.status}`
           );
@@ -1209,21 +2684,26 @@
           await response.json();
 
 
-        if (!data.robot) {
+        if (
+          !data ||
+          !data.robot
+        ) {
+
           throw new Error(
             "Robot data was not returned by the API."
           );
         }
 
 
-        updateDashboard(data.robot);
+        updateDashboard(
+          data.robot
+        );
 
 
         setApiStatus(
           "online",
           "Online — live machine data connected."
         );
-
 
       } catch (error) {
 
@@ -1233,22 +2713,61 @@
         );
 
 
+        const message =
+          error.name === "AbortError"
+            ? "The backend took too long to respond. Render may be waking its free instance."
+            : "The live backend could not be reached. Render free instances may take a moment to wake.";
+
+
         setApiStatus(
           "offline",
-          "Unavailable — the live backend could not be reached. Render free instances may take a moment to wake."
+          message
         );
 
+      } finally {
+
+        elements.refreshButton.disabled =
+          false;
       }
     }
 
 
+    /*
+     * ==========================================================
+     * RUN LIVE MISSION
+     * ==========================================================
+     *
+     * IMPORTANT:
+     *
+     * Current backend route:
+     *
+     * POST /missions
+     *
+     * This is intentionally not /run-mission.
+     */
+
     async function runLiveMission() {
+
+      if (missionInProgress) {
+        return;
+      }
+
+
+      missionInProgress =
+        true;
+
 
       const button =
         elements.runMissionButton;
 
 
-      button.disabled = true;
+      button.disabled =
+        true;
+
+
+      elements.refreshButton.disabled =
+        true;
+
 
       button.textContent =
         "Running Mission...";
@@ -1263,16 +2782,24 @@
       try {
 
         const response =
-          await fetch(
-            `${API_BASE}/missions`,
+          await fetchWithTimeout(
+            MISSION_ENDPOINT,
             {
               method: "POST",
 
               headers: {
                 "Content-Type":
+                  "application/json",
+
+                "Accept":
                   "application/json"
               },
 
+              /*
+               * The current backend supplies its
+               * configured/default navigation mission
+               * when no mission body is required.
+               */
               body: JSON.stringify({}),
 
               cache: "no-store"
@@ -1285,21 +2812,32 @@
           let message =
             `Mission API returned HTTP ${response.status}`;
 
+
           try {
 
             const errorData =
               await response.json();
 
-            if (errorData.error) {
+
+            if (
+              errorData &&
+              errorData.error
+            ) {
+
               message =
                 errorData.error;
             }
 
           } catch (_) {
-            // Keep the HTTP error message.
+            /*
+             * Keep the HTTP error message.
+             */
           }
 
-          throw new Error(message);
+
+          throw new Error(
+            message
+          );
         }
 
 
@@ -1307,7 +2845,14 @@
           await response.json();
 
 
+        /*
+         * A successful HTTP response is not enough.
+         * We require the backend to return its machine
+         * and mission objects before declaring success.
+         */
+
         if (
+          !data ||
           !data.robot ||
           !data.mission
         ) {
@@ -1318,7 +2863,9 @@
         }
 
 
-        updateDashboard(data.robot);
+        updateDashboard(
+          data.robot
+        );
 
 
         updateLatestMission(
@@ -1328,9 +2875,8 @@
 
         setApiStatus(
           "online",
-          "Mission verified — live machine data updated successfully."
+          "Mission verified — live machine state updated successfully."
         );
-
 
       } catch (error) {
 
@@ -1340,15 +2886,30 @@
         );
 
 
+        const message =
+          error.name === "AbortError"
+            ? "Mission request timed out. The Render backend may still be processing or waking."
+            : error.message;
+
+
         setApiStatus(
           "offline",
-          `Mission failed: ${error.message}`
+          `Mission failed: ${message}`
         );
-
 
       } finally {
 
-        button.disabled = false;
+        missionInProgress =
+          false;
+
+
+        button.disabled =
+          false;
+
+
+        elements.refreshButton.disabled =
+          false;
+
 
         button.textContent =
           "Run Live Mission →";
@@ -1356,119 +2917,11 @@
     }
 
 
-    function updateLatestMission(mission) {
-
-      if (!mission) {
-        return;
-      }
-
-
-      if (mission.robotId) {
-
-        elements.latestMissionRobot.textContent =
-          mission.robotId;
-      }
-
-
-      if (mission.route) {
-
-        if (
-          typeof mission.route === "string"
-        ) {
-
-          elements.missionRoute.textContent =
-            mission.route;
-
-        } else if (
-          mission.route.start &&
-          mission.route.end
-        ) {
-
-          elements.missionRoute.textContent =
-            `${formatPoint(
-              mission.route.start
-            )} → ${formatPoint(
-              mission.route.end
-            )}`;
-        }
-      }
-
-
-      const score =
-        mission.validationScore ??
-        mission.poPWScore ??
-        mission.score ??
-        100;
-
-
-      elements.missionScore.textContent =
-        `${score}/100`;
-
-
-      if (
-        mission.validation
-      ) {
-
-        const passed =
-          mission.validation.passed ??
-          mission.validation.checksPassed;
-
-        const total =
-          mission.validation.total ??
-          mission.validation.checksTotal;
-
-        if (
-          passed !== undefined &&
-          total !== undefined
-        ) {
-
-          elements.validationChecks.textContent =
-            `${passed}/${total}`;
-        }
-
-
-        const result =
-          mission.validation.result ??
-          mission.validation.status;
-
-        if (result) {
-
-          elements.validationResult.textContent =
-            String(result).toUpperCase();
-        }
-      }
-    }
-
-
-    function formatPoint(point) {
-
-      if (!point) {
-        return "";
-      }
-
-
-      if (
-        Array.isArray(point) &&
-        point.length >= 2
-      ) {
-
-        return `(${point[0]},${point[1]})`;
-      }
-
-
-      if (
-        typeof point === "object" &&
-        point.x !== undefined &&
-        point.y !== undefined
-      ) {
-
-        return `(${point.x},${point.y})`;
-      }
-
-
-      return String(point);
-    }
-
+    /*
+     * ==========================================================
+     * EVENT HANDLERS
+     * ==========================================================
+     */
 
     elements.runMissionButton.addEventListener(
       "click",
@@ -1482,7 +2935,14 @@
     );
 
 
+    /*
+     * ==========================================================
+     * INITIAL LOAD
+     * ==========================================================
+     */
+
     fetchRobotData();
+
   </script>
 
 </body>
