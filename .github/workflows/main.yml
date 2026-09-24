@@ -29,6 +29,8 @@ jobs:
         run: python --version
 
       - name: Run backend mission engine
+        env:
+          ON1_CI_TEST: "1"
         run: python backend/main.py
 
       - name: Verify backend evidence artifact
@@ -101,4 +103,5 @@ jobs:
       - name: Run API self-test
         env:
           ON1_API_TEST: "1"
+          ON1_CI_TEST: "1"
         run: python backend/api.py
