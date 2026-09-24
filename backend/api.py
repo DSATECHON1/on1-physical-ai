@@ -2377,8 +2377,7 @@ ENTRY POINT
 
 ============================================================
 
-if name == "main":
-
+if __name__ == "__main__":
 if os.getenv(
     "ON1_API_TEST",
     "0",
