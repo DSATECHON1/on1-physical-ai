@@ -82,9 +82,7 @@ def read_json_body(handler):
     if content_length <= 0:
         return {}
 
-    raw_body = handler.rfile.read(
-        content_length
-    )
+    raw_body = handler.rfile.read(content_length)
 
     if not raw_body:
         return {}
@@ -93,7 +91,6 @@ def read_json_body(handler):
         parsed = json.loads(
             raw_body.decode("utf-8")
         )
-
     except (
         json.JSONDecodeError,
         UnicodeDecodeError,
@@ -158,8 +155,9 @@ def get_canonical_fingerprint(mission):
 
         evidenceFingerprint.value
 
-    The fallback to .fingerprint keeps the API compatible with
-    older persisted records that may have used that field.
+    Legacy fallback:
+
+        evidenceFingerprint.fingerprint
     """
 
     fingerprint_data = mission.get(
@@ -173,16 +171,12 @@ def get_canonical_fingerprint(mission):
     ):
         return None
 
-    value = fingerprint_data.get(
-        "value"
-    )
+    value = fingerprint_data.get("value")
 
     if value:
         return value
 
-    legacy_value = fingerprint_data.get(
-        "fingerprint"
-    )
+    legacy_value = fingerprint_data.get("fingerprint")
 
     if legacy_value:
         return legacy_value
@@ -191,10 +185,6 @@ def get_canonical_fingerprint(mission):
 
 
 def get_konnex_adapter_name(konnex_adapter):
-    """
-    Read the Konnex adapter name from the production schema.
-    """
-
     adapter_metadata = konnex_adapter.get(
         "adapter",
         {},
@@ -206,16 +196,10 @@ def get_konnex_adapter_name(konnex_adapter):
     ):
         return None
 
-    return adapter_metadata.get(
-        "name"
-    )
+    return adapter_metadata.get("name")
 
 
 def get_konnex_adapter_version(konnex_adapter):
-    """
-    Read the Konnex adapter version from the production schema.
-    """
-
     adapter_metadata = konnex_adapter.get(
         "adapter",
         {},
@@ -227,16 +211,11 @@ def get_konnex_adapter_version(konnex_adapter):
     ):
         return None
 
-    return adapter_metadata.get(
-        "version"
-    )
+    return adapter_metadata.get("version")
 
 
 def get_konnex_adapter_status(konnex_adapter):
     """
-    Read the Konnex adapter readiness status from the
-    production schema.
-
     Production schema:
 
         konnexAdapter.adapter.status
@@ -255,23 +234,16 @@ def get_konnex_adapter_status(konnex_adapter):
         adapter_metadata,
         dict,
     ):
-        status = adapter_metadata.get(
-            "status"
-        )
+        status = adapter_metadata.get("status")
 
         if status:
             return status
 
-    return konnex_adapter.get(
-        "status"
-    )
+    return konnex_adapter.get("status")
 
 
 def get_konnex_submission_flag(konnex_adapter):
     """
-    Read submittedToKonnex from the production Konnex
-    adapter schema.
-
     Production schema:
 
         konnexAdapter.submission.submittedToKonnex
@@ -304,10 +276,6 @@ def get_konnex_submission_flag(konnex_adapter):
 
 
 def get_konnex_verified_flag(konnex_adapter):
-    """
-    Read Konnex verification state.
-    """
-
     submission = konnex_adapter.get(
         "submission",
         {},
@@ -331,10 +299,6 @@ def get_konnex_verified_flag(konnex_adapter):
 
 
 def get_on_chain_verified_flag(konnex_adapter):
-    """
-    Read on-chain verification state.
-    """
-
     submission = konnex_adapter.get(
         "submission",
         {},
@@ -447,9 +411,7 @@ def build_konnex_submission_package(mission):
             ),
         }
 
-    mission_status = mission.get(
-        "status"
-    )
+    mission_status = mission.get("status")
 
     validator = mission.get(
         "validatorResult",
@@ -471,34 +433,24 @@ def build_konnex_submission_package(mission):
         {},
     )
 
-    canonical_fingerprint = (
-        get_canonical_fingerprint(
-            mission
-        )
+    canonical_fingerprint = get_canonical_fingerprint(
+        mission
     )
 
-    adapter_status = (
-        get_konnex_adapter_status(
-            konnex_adapter
-        )
+    adapter_status = get_konnex_adapter_status(
+        konnex_adapter
     )
 
-    submitted_to_konnex = (
-        get_konnex_submission_flag(
-            konnex_adapter
-        )
+    submitted_to_konnex = get_konnex_submission_flag(
+        konnex_adapter
     )
 
-    konnex_verified = (
-        get_konnex_verified_flag(
-            konnex_adapter
-        )
+    konnex_verified = get_konnex_verified_flag(
+        konnex_adapter
     )
 
-    on_chain_verified = (
-        get_on_chain_verified_flag(
-            konnex_adapter
-        )
+    on_chain_verified = get_on_chain_verified_flag(
+        konnex_adapter
     )
 
     adapter_integration = konnex_adapter.get(
@@ -526,25 +478,17 @@ def build_konnex_submission_package(mission):
     )
 
     checks["missionVerified"] = (
-        validator.get(
-            "verified"
-        ) is True
+        validator.get("verified") is True
     )
 
     checks["validationComplete"] = (
-        validator.get(
-            "passedChecks"
-        ) == 6
+        validator.get("passedChecks") == 6
         and
-        validator.get(
-            "totalChecks"
-        ) == 6
+        validator.get("totalChecks") == 6
     )
 
     checks["powpScorePresent"] = (
-        mission.get(
-            "powpScore"
-        ) is not None
+        mission.get("powpScore") is not None
     )
 
     checks["evidenceFingerprintPresent"] = (
@@ -562,8 +506,7 @@ def build_konnex_submission_package(mission):
     )
 
     checks["konnexAdapterReady"] = (
-        adapter_status
-        == "READY_FOR_KONNEX_REVIEW"
+        adapter_status == "READY_FOR_KONNEX_REVIEW"
     )
 
     checks["notSubmittedToKonnex"] = (
@@ -600,9 +543,7 @@ def build_konnex_submission_package(mission):
         artifact_sha256 == canonical_fingerprint
     )
 
-    ready = all(
-        checks.values()
-    )
+    ready = all(checks.values())
 
     failed_checks = [
         name
@@ -649,16 +590,12 @@ def build_konnex_submission_package(mission):
                 "schema"
             ),
 
-            "name": (
-                get_konnex_adapter_name(
-                    konnex_adapter
-                )
+            "name": get_konnex_adapter_name(
+                konnex_adapter
             ),
 
-            "version": (
-                get_konnex_adapter_version(
-                    konnex_adapter
-                )
+            "version": get_konnex_adapter_version(
+                konnex_adapter
             ),
 
             "status": adapter_status,
@@ -694,9 +631,7 @@ def build_konnex_submission_package(mission):
                 )
             ),
 
-            "fingerprint": (
-                canonical_fingerprint
-            ),
+            "fingerprint": canonical_fingerprint,
 
             "algorithm": (
                 fingerprint_data.get(
@@ -705,9 +640,7 @@ def build_konnex_submission_package(mission):
                 )
             ),
 
-            "artifactSha256": (
-                artifact_sha256
-            ),
+            "artifactSha256": artifact_sha256,
         },
 
         "validation": {
@@ -766,8 +699,7 @@ class ON1APIHandler(BaseHTTPRequestHandler):
         *args,
     ):
         print(
-            "[ON1 API] "
-            + format_string % args,
+            "[ON1 API] " + format_string % args,
             flush=True,
         )
 
@@ -776,7 +708,6 @@ class ON1APIHandler(BaseHTTPRequestHandler):
     # --------------------------------------------------------
 
     def do_OPTIONS(self):
-
         self.send_response(204)
 
         self.send_header(
@@ -806,14 +737,9 @@ class ON1APIHandler(BaseHTTPRequestHandler):
     # --------------------------------------------------------
 
     def do_GET(self):
-
-        path = self.path.split(
-            "?",
-            1,
-        )[0]
+        path = self.path.split("?", 1)[0]
 
         try:
-
             if path == "/":
                 handle_root(self)
 
@@ -830,17 +756,12 @@ class ON1APIHandler(BaseHTTPRequestHandler):
                 handle_konnex_submission_latest(self)
 
             else:
-
                 send_json(
                     self,
                     404,
                     {
-                        "error": (
-                            "Endpoint not found."
-                        ),
-
+                        "error": "Endpoint not found.",
                         "path": path,
-
                         "availableEndpoints": [
                             "GET /",
                             "GET /health",
@@ -853,7 +774,6 @@ class ON1APIHandler(BaseHTTPRequestHandler):
                 )
 
         except Exception as exc:
-
             print(
                 f"[ON1 API] GET {path} error: {exc}",
                 flush=True,
@@ -863,10 +783,7 @@ class ON1APIHandler(BaseHTTPRequestHandler):
                 self,
                 500,
                 {
-                    "error": (
-                        "Internal server error."
-                    ),
-
+                    "error": "Internal server error.",
                     "message": str(exc),
                 },
             )
@@ -876,32 +793,19 @@ class ON1APIHandler(BaseHTTPRequestHandler):
     # --------------------------------------------------------
 
     def do_POST(self):
-
-        path = self.path.split(
-            "?",
-            1,
-        )[0]
+        path = self.path.split("?", 1)[0]
 
         try:
-
             if path == "/missions":
-
-                handle_create_mission(
-                    self
-                )
+                handle_create_mission(self)
 
             else:
-
                 send_json(
                     self,
                     404,
                     {
-                        "error": (
-                            "Endpoint not found."
-                        ),
-
+                        "error": "Endpoint not found.",
                         "path": path,
-
                         "availableEndpoints": [
                             "GET /",
                             "GET /health",
@@ -914,7 +818,6 @@ class ON1APIHandler(BaseHTTPRequestHandler):
                 )
 
         except ValueError as exc:
-
             print(
                 f"[ON1 API] POST {path} validation error: {exc}",
                 flush=True,
@@ -929,7 +832,6 @@ class ON1APIHandler(BaseHTTPRequestHandler):
             )
 
         except Exception as exc:
-
             print(
                 f"[ON1 API] POST {path} error: {exc}",
                 flush=True,
@@ -939,10 +841,7 @@ class ON1APIHandler(BaseHTTPRequestHandler):
                 self,
                 500,
                 {
-                    "error": (
-                        "Internal server error."
-                    ),
-
+                    "error": "Internal server error.",
                     "message": str(exc),
                 },
             )
@@ -953,20 +852,15 @@ class ON1APIHandler(BaseHTTPRequestHandler):
 # ============================================================
 
 def handle_root(handler):
-
     send_json(
         handler,
         200,
         {
             "project": PROJECT_NAME,
 
-            "prototypeVersion": (
-                PROTOTYPE_VERSION
-            ),
+            "prototypeVersion": PROTOTYPE_VERSION,
 
-            "service": (
-                "ON1 Physical AI API"
-            ),
+            "service": "ON1 Physical AI API",
 
             "status": "online",
 
@@ -1010,7 +904,6 @@ def handle_root(handler):
 # ============================================================
 
 def handle_health(handler):
-
     send_json(
         handler,
         200,
@@ -1019,9 +912,7 @@ def handle_health(handler):
 
             "project": PROJECT_NAME,
 
-            "prototypeVersion": (
-                PROTOTYPE_VERSION
-            ),
+            "prototypeVersion": PROTOTYPE_VERSION,
 
             "integration": {
                 "physicalHardware": False,
@@ -1039,7 +930,6 @@ def handle_health(handler):
 # ============================================================
 
 def handle_robot(handler):
-
     send_json(
         handler,
         200,
@@ -1062,11 +952,9 @@ def handle_robot(handler):
 # ============================================================
 
 def handle_latest_mission(handler):
-
     mission = load_latest_mission()
 
     if mission is None:
-
         send_json(
             handler,
             404,
@@ -1113,7 +1001,6 @@ def handle_konnex_submission_latest(handler):
     mission = load_latest_mission()
 
     if mission is None:
-
         send_json(
             handler,
             404,
@@ -1167,10 +1054,7 @@ def handle_konnex_submission_latest(handler):
 # ============================================================
 
 def handle_create_mission(handler):
-
-    payload = read_json_body(
-        handler
-    )
+    payload = read_json_body(handler)
 
     start = payload.get(
         "start",
@@ -1189,7 +1073,6 @@ def handle_create_mission(handler):
         )
         or len(start) != 2
     ):
-
         raise ValueError(
             "start must be an array containing exactly two coordinates."
         )
@@ -1201,34 +1084,20 @@ def handle_create_mission(handler):
         )
         or len(target) != 2
     ):
-
         raise ValueError(
             "target must be an array containing exactly two coordinates."
         )
 
     try:
-
-        start_x = int(
-            start[0]
-        )
-
-        start_y = int(
-            start[1]
-        )
-
-        target_x = int(
-            target[0]
-        )
-
-        target_y = int(
-            target[1]
-        )
+        start_x = int(start[0])
+        start_y = int(start[1])
+        target_x = int(target[0])
+        target_y = int(target[1])
 
     except (
         TypeError,
         ValueError,
     ):
-
         raise ValueError(
             "start and target coordinates must be integers."
         )
@@ -1238,7 +1107,6 @@ def handle_create_mission(handler):
             start_x,
             start_y,
         ),
-
         target=(
             target_x,
             target_y,
@@ -1246,12 +1114,9 @@ def handle_create_mission(handler):
     )
 
     result = {
-
         "project": PROJECT_NAME,
 
-        "prototypeVersion": (
-            PROTOTYPE_VERSION
-        ),
+        "prototypeVersion": PROTOTYPE_VERSION,
 
         "simulation": {
             "browser": False,
@@ -1272,31 +1137,20 @@ def handle_create_mission(handler):
         "mission": mission,
     }
 
-    output_path, fingerprint = (
-        export_evidence(
-            result
-        )
+    output_path, fingerprint = export_evidence(
+        result
     )
 
-    result[
-        "evidenceFingerprint"
-    ] = mission.get(
+    result["evidenceFingerprint"] = mission.get(
         "evidenceFingerprint"
     )
 
-    result[
-        "konnexAdapter"
-    ] = mission.get(
+    result["konnexAdapter"] = mission.get(
         "konnexAdapter"
     )
 
-    result[
-        "evidenceArtifact"
-    ] = {
-
-        "path": str(
-            output_path
-        ),
+    result["evidenceArtifact"] = {
+        "path": str(output_path),
 
         "sha256": fingerprint,
 
@@ -1319,7 +1173,6 @@ def handle_create_mission(handler):
 # ============================================================
 
 def run_server():
-
     server = ThreadingHTTPServer(
         (
             HOST,
@@ -1394,18 +1247,15 @@ def run_server():
     )
 
     try:
-
         server.serve_forever()
 
     except KeyboardInterrupt:
-
         print(
             "\n[ON1 API] Shutdown requested.",
             flush=True,
         )
 
     finally:
-
         server.server_close()
 
         print(
@@ -1421,18 +1271,12 @@ def run_server():
 class SelfTestRobot:
 
     def to_dict(self):
-
         return {
-
             "robotId": "ON1-SELF-TEST",
 
-            "identity": (
-                "ON1-SELF-TEST-MACHINE"
-            ),
+            "identity": "ON1-SELF-TEST-MACHINE",
 
-            "model": (
-                "ON1 Self-Test Navigator"
-            ),
+            "model": "ON1 Self-Test Navigator",
 
             "status": "IDLE",
 
@@ -1455,16 +1299,10 @@ class SelfTestEngine:
         start,
         target,
     ):
-
         return {
+            "missionId": "MSN-SELF-TEST-001",
 
-            "missionId": (
-                "MSN-SELF-TEST-001"
-            ),
-
-            "robotId": (
-                "ON1-SELF-TEST"
-            ),
+            "robotId": "ON1-SELF-TEST",
 
             "taskType": "Navigation",
 
@@ -1487,7 +1325,6 @@ class SelfTestEngine:
             ),
 
             "telemetry": [
-
                 {
                     "step": 0,
 
@@ -1514,18 +1351,11 @@ class SelfTestEngine:
             "status": "COMPLETED",
 
             "evidence": {
+                "evidenceId": "EVD-SELF-TEST-001",
 
-                "evidenceId": (
-                    "EVD-SELF-TEST-001"
-                ),
+                "missionId": "MSN-SELF-TEST-001",
 
-                "missionId": (
-                    "MSN-SELF-TEST-001"
-                ),
-
-                "robotId": (
-                    "ON1-SELF-TEST"
-                ),
+                "robotId": "ON1-SELF-TEST",
 
                 "taskType": "Navigation",
 
@@ -1533,7 +1363,6 @@ class SelfTestEngine:
             },
 
             "validatorResult": {
-
                 "validatorId": (
                     "ON1-SELF-TEST-VALIDATOR"
                 ),
@@ -1543,7 +1372,6 @@ class SelfTestEngine:
                 ),
 
                 "checks": {
-
                     "missionStarted": True,
 
                     "missionCompleted": True,
@@ -1567,7 +1395,6 @@ class SelfTestEngine:
             "powpScore": 100,
 
             "evidenceFingerprint": {
-
                 "fingerprint": (
                     "self-test-canonical-fingerprint"
                 ),
@@ -1580,16 +1407,12 @@ class SelfTestEngine:
             },
 
             "konnexAdapter": {
-
                 "schema": (
                     "on1.physical-ai.konnex-mission.v1"
                 ),
 
                 "adapter": {
-
-                    "name": (
-                        "ON1 Konnex Adapter"
-                    ),
+                    "name": "ON1 Konnex Adapter",
 
                     "version": "0.1.0",
 
@@ -1599,7 +1422,6 @@ class SelfTestEngine:
                 },
 
                 "submission": {
-
                     "submittedToKonnex": False,
 
                     "konnexVerified": False,
@@ -1608,7 +1430,6 @@ class SelfTestEngine:
                 },
 
                 "integration": {
-
                     "physicalHardware": False,
 
                     "konnexVerified": False,
@@ -1618,7 +1439,6 @@ class SelfTestEngine:
             },
 
             "evidenceArtifact": {
-
                 "sha256": (
                     "self-test-canonical-fingerprint"
                 ),
@@ -1629,7 +1449,6 @@ class SelfTestEngine:
 
 
 def self_test_export_evidence(result):
-
     return (
         Path(
             "SELF_TEST_ONLY/"
@@ -1650,20 +1469,14 @@ def api_request(
     path="/",
     payload=None,
 ):
-
-    url = (
-        f"{base_url}{path}"
-    )
+    url = f"{base_url}{path}"
 
     data = None
 
     if payload is not None:
-
         data = json.dumps(
             payload
-        ).encode(
-            "utf-8"
-        )
+        ).encode("utf-8")
 
     request = urllib.request.Request(
         url=url,
@@ -1673,13 +1486,11 @@ def api_request(
         method=method,
 
         headers={
-            "Content-Type":
-                "application/json",
+            "Content-Type": "application/json",
         },
     )
 
     try:
-
         with urllib.request.urlopen(
             request,
             timeout=10,
@@ -1688,9 +1499,7 @@ def api_request(
             raw = (
                 response
                 .read()
-                .decode(
-                    "utf-8"
-                )
+                .decode("utf-8")
             )
 
             parsed = (
@@ -1705,23 +1514,16 @@ def api_request(
             )
 
     except urllib.error.HTTPError as exc:
-
         raw = (
             exc
             .read()
-            .decode(
-                "utf-8"
-            )
+            .decode("utf-8")
         )
 
         try:
-
-            parsed = json.loads(
-                raw
-            )
+            parsed = json.loads(raw)
 
         except json.JSONDecodeError:
-
             parsed = {
                 "error": raw,
             }
@@ -1740,9 +1542,7 @@ def assert_condition(
     condition,
     message,
 ):
-
     if not condition:
-
         raise RuntimeError(
             f"SELF-TEST FAILED: {message}"
         )
@@ -1753,7 +1553,6 @@ def assert_condition(
 # ============================================================
 
 def run_self_test():
-
     global robot
     global engine
     global export_evidence
@@ -1763,9 +1562,7 @@ def run_self_test():
 
     original_engine = engine
 
-    original_export_evidence = (
-        export_evidence
-    )
+    original_export_evidence = export_evidence
 
     original_load_latest_mission = (
         load_latest_mission
@@ -1774,7 +1571,6 @@ def run_self_test():
     test_server = None
 
     try:
-
         robot = SelfTestRobot()
 
         engine = SelfTestEngine()
@@ -1791,16 +1587,10 @@ def run_self_test():
             ON1APIHandler,
         )
 
-        test_port = (
-            test_server
-            .server_address[1]
-        )
+        test_port = test_server.server_address[1]
 
         server_thread = Thread(
-            target=(
-                test_server
-                .serve_forever
-            ),
+            target=test_server.serve_forever,
             daemon=True,
         )
 
@@ -1826,23 +1616,17 @@ def run_self_test():
         )
 
         assert_condition(
-            data.get(
-                "status"
-            ) == "online",
+            data.get("status") == "online",
             "GET / must report online status.",
         )
 
         assert_condition(
-            data.get(
-                "project"
-            ) == PROJECT_NAME,
+            data.get("project") == PROJECT_NAME,
             "GET / must report the correct project.",
         )
 
         assert_condition(
-            data.get(
-                "apiVersion"
-            ) == "0.4",
+            data.get("apiVersion") == "0.4",
             "GET / must report API version 0.4.",
         )
 
@@ -1862,9 +1646,7 @@ def run_self_test():
         )
 
         assert_condition(
-            data.get(
-                "status"
-            ) == "online",
+            data.get("status") == "online",
             "GET /health must report online status.",
         )
 
@@ -1889,9 +1671,8 @@ def run_self_test():
         )
 
         assert_condition(
-            data["robot"].get(
-                "robotId"
-            ) == "ON1-SELF-TEST",
+            data["robot"].get("robotId")
+            == "ON1-SELF-TEST",
             "GET /robot must return the isolated self-test robot.",
         )
 
@@ -1927,9 +1708,7 @@ def run_self_test():
         )
 
         assert_condition(
-            mission.get(
-                "status"
-            ) == "COMPLETED",
+            mission.get("status") == "COMPLETED",
             "Self-test mission must be COMPLETED.",
         )
 
@@ -1939,30 +1718,22 @@ def run_self_test():
         )
 
         assert_condition(
-            validator.get(
-                "verified"
-            ) is True,
+            validator.get("verified") is True,
             "Mission validator must report verified=True.",
         )
 
         assert_condition(
-            validator.get(
-                "passedChecks"
-            ) == 6,
+            validator.get("passedChecks") == 6,
             "Validator must pass all 6 checks.",
         )
 
         assert_condition(
-            validator.get(
-                "totalChecks"
-            ) == 6,
+            validator.get("totalChecks") == 6,
             "Validator must contain 6 total checks.",
         )
 
         assert_condition(
-            mission.get(
-                "powpScore"
-            ) == 100,
+            mission.get("powpScore") == 100,
             "PoPW-style score must be 100.",
         )
 
@@ -1972,9 +1743,7 @@ def run_self_test():
         )
 
         assert_condition(
-            evidence_artifact.get(
-                "sha256"
-            )
+            evidence_artifact.get("sha256")
             == "self-test-canonical-fingerprint",
             "Evidence artifact fingerprint must be returned.",
         )
@@ -1987,16 +1756,13 @@ def run_self_test():
             mission
         )
 
-        self_test_latest_mission[
-            "persistedAt"
-        ] = (
+        self_test_latest_mission["persistedAt"] = (
             "2026-01-01T00:00:02+00:00"
         )
 
         self_test_latest_mission[
             "evidenceFingerprint"
         ] = {
-
             "fingerprint": (
                 "self-test-canonical-fingerprint"
             ),
@@ -2011,16 +1777,12 @@ def run_self_test():
         self_test_latest_mission[
             "konnexAdapter"
         ] = {
-
             "schema": (
                 "on1.physical-ai.konnex-mission.v1"
             ),
 
             "adapter": {
-
-                "name": (
-                    "ON1 Konnex Adapter"
-                ),
+                "name": "ON1 Konnex Adapter",
 
                 "version": "0.1.0",
 
@@ -2030,7 +1792,6 @@ def run_self_test():
             },
 
             "submission": {
-
                 "submittedToKonnex": False,
 
                 "konnexVerified": False,
@@ -2039,7 +1800,6 @@ def run_self_test():
             },
 
             "integration": {
-
                 "physicalHardware": False,
 
                 "konnexVerified": False,
@@ -2051,7 +1811,6 @@ def run_self_test():
         self_test_latest_mission[
             "evidenceArtifact"
         ] = {
-
             "sha256": (
                 "self-test-canonical-fingerprint"
             ),
@@ -2060,7 +1819,6 @@ def run_self_test():
         }
 
         def self_test_load_latest_mission():
-
             return self_test_latest_mission
 
         load_latest_mission = (
@@ -2083,23 +1841,17 @@ def run_self_test():
         )
 
         assert_condition(
-            data.get(
-                "found"
-            ) is True,
+            data.get("found") is True,
             "Konnex readiness endpoint must find the test mission.",
         )
 
         assert_condition(
-            data.get(
-                "ready"
-            ) is True,
+            data.get("ready") is True,
             "Konnex readiness package must report ready=True.",
         )
 
         assert_condition(
-            data.get(
-                "status"
-            )
+            data.get("status")
             == "READY_FOR_KONNEX_SUBMISSION",
             "Konnex readiness status must report READY_FOR_KONNEX_SUBMISSION.",
         )
@@ -2108,9 +1860,7 @@ def run_self_test():
             data.get(
                 "adapter",
                 {},
-            ).get(
-                "name"
-            )
+            ).get("name")
             == "ON1 Konnex Adapter",
             "Konnex adapter name must be exposed.",
         )
@@ -2119,9 +1869,7 @@ def run_self_test():
             data.get(
                 "adapter",
                 {},
-            ).get(
-                "version"
-            )
+            ).get("version")
             == "0.1.0",
             "Konnex adapter version must be exposed.",
         )
@@ -2130,9 +1878,7 @@ def run_self_test():
             data.get(
                 "adapter",
                 {},
-            ).get(
-                "status"
-            )
+            ).get("status")
             == "READY_FOR_KONNEX_REVIEW",
             "Konnex adapter must be READY_FOR_KONNEX_REVIEW.",
         )
@@ -2141,9 +1887,7 @@ def run_self_test():
             data.get(
                 "evidence",
                 {},
-            ).get(
-                "fingerprint"
-            )
+            ).get("fingerprint")
             == "self-test-canonical-fingerprint",
             "Konnex package must expose the canonical evidence fingerprint.",
         )
@@ -2152,15 +1896,11 @@ def run_self_test():
             data.get(
                 "evidence",
                 {},
-            ).get(
-                "artifactSha256"
-            )
+            ).get("artifactSha256")
             == data.get(
                 "evidence",
                 {},
-            ).get(
-                "fingerprint"
-            ),
+            ).get("fingerprint"),
             "Evidence artifact SHA-256 must match the canonical fingerprint.",
         )
 
@@ -2168,9 +1908,7 @@ def run_self_test():
             data.get(
                 "validation",
                 {},
-            ).get(
-                "verified"
-            ) is True,
+            ).get("verified") is True,
             "Konnex package must require verified=True.",
         )
 
@@ -2178,9 +1916,7 @@ def run_self_test():
             data.get(
                 "validation",
                 {},
-            ).get(
-                "passedChecks"
-            ) == 6,
+            ).get("passedChecks") == 6,
             "Konnex package must require all 6 validation checks.",
         )
 
@@ -2188,16 +1924,12 @@ def run_self_test():
             data.get(
                 "validation",
                 {},
-            ).get(
-                "totalChecks"
-            ) == 6,
+            ).get("totalChecks") == 6,
             "Konnex package must require 6 total validation checks.",
         )
 
         assert_condition(
-            data.get(
-                "failedChecks"
-            ) == [],
+            data.get("failedChecks") == [],
             "Konnex package must contain no failed readiness checks.",
         )
 
@@ -2205,9 +1937,7 @@ def run_self_test():
             data.get(
                 "source",
                 {},
-            ).get(
-                "readOnly"
-            ) is True,
+            ).get("readOnly") is True,
             "Konnex readiness endpoint must be read-only.",
         )
 
@@ -2215,9 +1945,7 @@ def run_self_test():
             data.get(
                 "source",
                 {},
-            ).get(
-                "firebaseMutation"
-            ) is False,
+            ).get("firebaseMutation") is False,
             "Konnex readiness endpoint must not mutate Firebase.",
         )
 
@@ -2302,7 +2030,6 @@ def run_self_test():
         )
 
     finally:
-
         robot = original_robot
 
         engine = original_engine
@@ -2316,7 +2043,6 @@ def run_self_test():
         )
 
         if test_server is not None:
-
             test_server.shutdown()
 
             test_server.server_close()
