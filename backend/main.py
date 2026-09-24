@@ -248,17 +248,28 @@ class _CIDocumentReference:
 
 
 class _CIQuery:
-    """Minimal query implementation for API latest-mission reads."""
+    """
+    Minimal Firestore-compatible query implementation.
+
+    Supports:
+    - order_by()
+    - limit()
+    - stream()
+
+    This is used only by GitHub Actions CI mode.
+    """
 
     def __init__(
         self,
         collection_name: str,
         order_field: str | None = None,
         descending: bool = False,
+        result_limit: int | None = None,
     ) -> None:
         self.collection_name = collection_name
         self.order_field = order_field
         self.descending = descending
+        self.result_limit = result_limit
 
     def order_by(
         self,
@@ -281,6 +292,28 @@ class _CIQuery:
             collection_name=self.collection_name,
             order_field=field,
             descending=descending,
+            result_limit=self.result_limit,
+        )
+
+    def limit(
+        self,
+        count: int,
+    ) -> "_CIQuery":
+        """
+        Apply a Firestore-compatible result limit.
+
+        The production API uses:
+            order_by(...).limit(1).stream()
+
+        This method keeps that API behavior available
+        inside isolated CI mode.
+        """
+
+        return _CIQuery(
+            collection_name=self.collection_name,
+            order_field=self.order_field,
+            descending=self.descending,
+            result_limit=count,
         )
 
     def stream(self):
@@ -312,22 +345,15 @@ class _CIQuery:
                 reverse=self.descending,
             )
 
-        for record in records:
-            if (
-                self.collection_name
-                == FIRESTORE_MEMORY_COLLECTION
-            ):
-                document_id = record.get(
-                    "memoryId",
-                    "",
-                )
-            else:
-                document_id = record.get(
-                    "missionId",
-                    "",
-                )
+        if self.result_limit is not None:
+            records = records[
+                : self.result_limit
+            ]
 
-            yield _CISnapshot(record)
+        for record in records:
+            yield _CISnapshot(
+                record
+            )
 
 
 class _CICollectionReference:
@@ -354,7 +380,7 @@ class _CICollectionReference:
         direction: Any = None,
     ) -> _CIQuery:
         return _CIQuery(
-            collection_name=self.collection_name,
+            collection_name=self.collection_name
         ).order_by(
             field,
             direction,
@@ -367,7 +393,10 @@ class _CICollectionReference:
 
 
 class _CIDeviceReference:
-    """Root device reference with Firestore-like subcollections."""
+    """
+    Root device reference with Firestore-like
+    subcollections.
+    """
 
     def get(self) -> _CISnapshot:
         return _CISnapshot(
