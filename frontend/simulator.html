@@ -607,7 +607,7 @@ footer {
   <section class="card full">
     <h2>Backend Result</h2>
 
-    <pre id="backendResult">Waiting for mission execution...</pre>
+    <pre id="backendResult">Loading latest persisted mission...</pre>
   </section>
 
 </div>
@@ -628,11 +628,20 @@ footer {
 
 const API_BASE = "https://on1-physical-ai-api.onrender.com";
 
-const ROBOT_ENDPOINT = `${API_BASE}/robot`;
-const MISSION_ENDPOINT = `${API_BASE}/missions`;
+const ROBOT_ENDPOINT =
+  `${API_BASE}/robot`;
+
+const MISSION_ENDPOINT =
+  `${API_BASE}/missions`;
+
+const LATEST_MISSION_ENDPOINT =
+  `${API_BASE}/missions/latest`;
 
 const ROBOT_TIMEOUT_MS = 30000;
+
 const MISSION_TIMEOUT_MS = 90000;
+
+const LATEST_MISSION_TIMEOUT_MS = 30000;
 
 
 /* =========================================================
@@ -661,20 +670,33 @@ function el(id) {
    FETCH WITH TIMEOUT
    ========================================================= */
 
-async function fetchWithTimeout(url, options = {}, timeout = 30000) {
+async function fetchWithTimeout(
+  url,
+  options = {},
+  timeout = 30000
+) {
 
-  const controller = new AbortController();
+  const controller =
+    new AbortController();
 
-  const timer = setTimeout(() => {
-    controller.abort();
-  }, timeout);
+  const timer =
+    setTimeout(
+      () => {
+        controller.abort();
+      },
+      timeout
+    );
 
   try {
 
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
+    const response =
+      await fetch(
+        url,
+        {
+          ...options,
+          signal: controller.signal
+        }
+      );
 
     return response;
 
@@ -690,13 +712,19 @@ async function fetchWithTimeout(url, options = {}, timeout = 30000) {
    BACKEND STATUS
    ========================================================= */
 
-function setBackendStatus(message, type = "") {
+function setBackendStatus(
+  message,
+  type = ""
+) {
 
-  const box = el("backendStatus");
+  const box =
+    el("backendStatus");
 
-  box.textContent = message;
+  box.textContent =
+    message;
 
-  box.className = "backend-status";
+  box.className =
+    "backend-status";
 
   if (type) {
     box.classList.add(type);
@@ -716,34 +744,44 @@ async function loadRobot() {
 
   try {
 
-    const response = await fetchWithTimeout(
-      ROBOT_ENDPOINT,
-      {
-        method: "GET",
-        headers: {
-          "Accept": "application/json"
-        }
-      },
-      ROBOT_TIMEOUT_MS
-    );
+    const response =
+      await fetchWithTimeout(
+        ROBOT_ENDPOINT,
+        {
+          method: "GET",
+          headers: {
+            "Accept":
+              "application/json"
+          }
+        },
+        ROBOT_TIMEOUT_MS
+      );
 
     if (!response.ok) {
+
       throw new Error(
         `Backend returned HTTP ${response.status}`
       );
+
     }
 
-    const data = await response.json();
+    const data =
+      await response.json();
 
     if (!data.robot) {
+
       throw new Error(
         "Backend response does not contain robot data."
       );
+
     }
 
-    state.robot = data.robot;
+    state.robot =
+      data.robot;
 
-    renderRobot(data.robot);
+    renderRobot(
+      data.robot
+    );
 
     setBackendStatus(
       "Backend online · Firebase state loaded",
@@ -752,12 +790,141 @@ async function loadRobot() {
 
   } catch (error) {
 
-    console.error("Robot load error:", error);
+    console.error(
+      "Robot load error:",
+      error
+    );
 
     setBackendStatus(
       `Backend connection failed: ${error.message}`,
       "error"
     );
+
+  }
+}
+
+
+/* =========================================================
+   LOAD LATEST PERSISTED MISSION
+   ========================================================= */
+
+async function loadLatestMission() {
+
+  try {
+
+    const response =
+      await fetchWithTimeout(
+        LATEST_MISSION_ENDPOINT,
+        {
+          method: "GET",
+          headers: {
+            "Accept":
+              "application/json"
+          }
+        },
+        LATEST_MISSION_TIMEOUT_MS
+      );
+
+    if (!response.ok) {
+
+      throw new Error(
+        `Latest mission request failed with HTTP ${response.status}`
+      );
+
+    }
+
+    const data =
+      await response.json();
+
+    /*
+     * The backend returns:
+     *
+     * {
+     *   found: true,
+     *   mission: {...},
+     *   robot: {...},
+     *   evidenceFingerprint: {...},
+     *   konnexAdapter: {...},
+     *   evidenceArtifact: {...}
+     * }
+     *
+     * If no mission exists yet, leave the
+     * execution interface in its normal pending state.
+     */
+
+    if (
+      data.found !== true ||
+      !data.mission
+    ) {
+
+      state.latestBackendResult =
+        null;
+
+      el("backendResult").textContent =
+        "No persisted mission is available yet. Run a mission to create the first backend result.";
+
+      return;
+
+    }
+
+    /*
+     * Restore the authoritative backend result.
+     *
+     * Do NOT execute a new mission.
+     */
+
+    state.latestBackendResult =
+      data;
+
+    state.mission =
+      data.mission;
+
+    /*
+     * Render the complete persisted mission
+     * through the same renderer used after a
+     * live mission execution.
+     */
+
+    renderBackendMission(
+      data
+    );
+
+    /*
+     * Restore the backend robot state as well.
+     */
+
+    if (data.robot) {
+
+      state.robot =
+        data.robot;
+
+      renderRobot(
+        data.robot
+      );
+
+    }
+
+    setBackendStatus(
+      "Backend online · latest mission restored from Firebase",
+      "online"
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Latest mission load error:",
+      error
+    );
+
+    /*
+     * Do not mark the entire backend offline if
+     * /robot already succeeded. The robot state
+     * remains useful even if latest-mission loading
+     * temporarily fails.
+     */
+
+    el("backendResult").textContent =
+      `Unable to restore latest mission: ${error.message}`;
 
   }
 }
@@ -779,37 +946,65 @@ function renderRobot(robot) {
     robot.model || "—";
 
   el("reputation").textContent =
-    Number(robot.reputationScore || 0);
+    Number(
+      robot.reputationScore || 0
+    );
 
   el("successfulMissions").textContent =
-    Number(robot.successfulMissions || 0);
+    Number(
+      robot.successfulMissions || 0
+    );
 
   el("failedMissions").textContent =
-    Number(robot.failedMissions || 0);
+    Number(
+      robot.failedMissions || 0
+    );
 
   el("missionCount").textContent =
-    Number(robot.missionCount || 0);
+    Number(
+      robot.missionCount || 0
+    );
 
-  const status = el("robotStatus");
+  const status =
+    el("robotStatus");
 
   status.textContent =
-    String(robot.status || "UNKNOWN").toUpperCase();
+    String(
+      robot.status || "UNKNOWN"
+    ).toUpperCase();
 
-  status.className = "status";
+  status.className =
+    "status";
 
   if (
-    String(robot.status || "").toUpperCase() === "RUNNING"
+    String(
+      robot.status || ""
+    ).toUpperCase() ===
+    "RUNNING"
   ) {
-    status.classList.add("running");
+
+    status.classList.add(
+      "running"
+    );
+
   }
 
   if (
-    String(robot.status || "").toUpperCase() === "IDLE"
+    String(
+      robot.status || ""
+    ).toUpperCase() ===
+    "IDLE"
   ) {
-    status.classList.add("success");
+
+    status.classList.add(
+      "success"
+    );
+
   }
 
-  renderMemory(robot.memory || []);
+  renderMemory(
+    robot.memory || []
+  );
 }
 
 
@@ -819,97 +1014,135 @@ function renderRobot(robot) {
 
 function renderMemory(memory) {
 
-  const container = el("memory");
+  const container =
+    el("memory");
 
-  if (!Array.isArray(memory) || memory.length === 0) {
+  if (
+    !Array.isArray(memory) ||
+    memory.length === 0
+  ) {
 
     container.innerHTML =
-      `<div class="empty">No backend memory records.</div>`;
+      `<div class="empty">
+        No backend memory records.
+      </div>`;
 
     return;
   }
 
   /*
-   * IMPORTANT:
-   * The backend may return memory records oldest-first.
-   * Do not assume memory[0] is the newest record.
+   * The backend may return memory records
+   * oldest-first.
    *
-   * The authoritative memory timestamp is recordedAt.
-   * We create a copy before sorting so the original backend
-   * response remains untouched.
+   * The authoritative memory timestamp
+   * is recordedAt.
+   *
+   * Create a copy before sorting so the
+   * original backend response remains untouched.
    */
 
-  const sortedMemory = [...memory].sort((a, b) => {
+  const sortedMemory =
+    [...memory].sort(
+      (a, b) => {
 
-    const timeA =
-      Date.parse(a?.recordedAt || "");
+        const timeA =
+          Date.parse(
+            a?.recordedAt || ""
+          );
 
-    const timeB =
-      Date.parse(b?.recordedAt || "");
+        const timeB =
+          Date.parse(
+            b?.recordedAt || ""
+          );
 
-    /*
-     * Valid timestamps are sorted newest-first.
-     */
+        if (
+          !Number.isNaN(timeA) &&
+          !Number.isNaN(timeB)
+        ) {
 
-    if (!Number.isNaN(timeA) && !Number.isNaN(timeB)) {
-      return timeB - timeA;
-    }
+          return timeB - timeA;
 
-    /*
-     * If only B has a valid timestamp, B is newer.
-     */
+        }
 
-    if (Number.isNaN(timeA) && !Number.isNaN(timeB)) {
-      return 1;
-    }
+        if (
+          Number.isNaN(timeA) &&
+          !Number.isNaN(timeB)
+        ) {
 
-    /*
-     * If only A has a valid timestamp, A is newer.
-     */
+          return 1;
 
-    if (!Number.isNaN(timeA) && Number.isNaN(timeB)) {
-      return -1;
-    }
+        }
 
-    /*
-     * If neither timestamp is usable, preserve the
-     * backend's original order.
-     */
+        if (
+          !Number.isNaN(timeA) &&
+          Number.isNaN(timeB)
+        ) {
 
-    return 0;
-  });
+          return -1;
 
-  const latest = sortedMemory[0];
+        }
+
+        return 0;
+
+      }
+    );
+
+  const latest =
+    sortedMemory[0];
 
   container.innerHTML = `
     <div class="row">
       <span class="label">Latest Memory ID</span>
-      <span class="value">${escapeHtml(latest.memoryId || "—")}</span>
+      <span class="value">
+        ${escapeHtml(
+          latest.memoryId || "—"
+        )}
+      </span>
     </div>
 
     <div class="row">
       <span class="label">Mission</span>
-      <span class="value">${escapeHtml(latest.missionId || "—")}</span>
+      <span class="value">
+        ${escapeHtml(
+          latest.missionId || "—"
+        )}
+      </span>
     </div>
 
     <div class="row">
       <span class="label">Task</span>
-      <span class="value">${escapeHtml(latest.taskType || "—")}</span>
+      <span class="value">
+        ${escapeHtml(
+          latest.taskType || "—"
+        )}
+      </span>
     </div>
 
     <div class="row">
       <span class="label">Result</span>
-      <span class="value">${escapeHtml(latest.result || "—")}</span>
+      <span class="value">
+        ${escapeHtml(
+          latest.result || "—"
+        )}
+      </span>
     </div>
 
     <div class="row">
       <span class="label">PoPW Score</span>
-      <span class="value">${Number(latest.powpScore || 0)}</span>
+      <span class="value">
+        ${Number(
+          latest.powpScore || 0
+        )}
+      </span>
     </div>
 
     <div class="row">
       <span class="label">Recorded</span>
-      <span class="value">${escapeHtml(latest.recordedAt || "—")}</span>
+      <span class="value">
+        ${escapeHtml(
+          latest.recordedAt || "—"
+        )}
+      </span>
     </div>
   `;
 }
@@ -927,19 +1160,27 @@ async function runMission() {
 
   state.running = true;
 
-  const runButton = el("runButton");
+  const runButton =
+    el("runButton");
 
-  runButton.disabled = true;
-  runButton.textContent = "Running Mission...";
+  runButton.disabled =
+    true;
 
-  el("exportButton").disabled = true;
+  runButton.textContent =
+    "Running Mission...";
 
-  setMissionStatus("RUNNING");
+  el("exportButton").disabled =
+    true;
+
+  setMissionStatus(
+    "RUNNING"
+  );
 
   el("verificationResult").textContent =
     "EXECUTING";
 
-  el("powpScore").textContent = "0";
+  el("powpScore").textContent =
+    "0";
 
   el("missionId").textContent =
     "Backend processing...";
@@ -961,64 +1202,73 @@ async function runMission() {
 
   try {
 
-    /*
-     * IMPORTANT:
-     * The live ON1 Physical AI API expects
-     * coordinates as two-element arrays:
-     *
-     * start:  [x, y]
-     * target: [x, y]
-     *
-     * The backend remains authoritative.
-     */
-
     const payload = {
       start: [0, 0],
       target: [10, 10]
     };
 
-    const response = await fetchWithTimeout(
-      MISSION_ENDPOINT,
-      {
-        method: "POST",
+    const response =
+      await fetchWithTimeout(
+        MISSION_ENDPOINT,
+        {
+          method: "POST",
 
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            "Accept":
+              "application/json"
+          },
+
+          body:
+            JSON.stringify(
+              payload
+            )
         },
-
-        body: JSON.stringify(payload)
-      },
-      MISSION_TIMEOUT_MS
-    );
+        MISSION_TIMEOUT_MS
+      );
 
     if (!response.ok) {
 
       let detail = "";
 
       try {
-        const errorData = await response.json();
-        detail = errorData.error || "";
+
+        const errorData =
+          await response.json();
+
+        detail =
+          errorData.error || "";
+
       } catch (_) {}
 
       throw new Error(
         `Mission request failed with HTTP ${response.status}` +
-        (detail ? `: ${detail}` : "")
+        (
+          detail
+            ? `: ${detail}`
+            : ""
+        )
       );
+
     }
 
-    const result = await response.json();
+    const result =
+      await response.json();
 
-    state.latestBackendResult = result;
-    state.mission = result.mission || result;
+    state.latestBackendResult =
+      result;
+
+    state.mission =
+      result.mission ||
+      result;
 
     finishVisualMission();
 
-    renderBackendMission(result);
-
-    /*
-     * Reload authoritative Firebase-backed robot state.
-     */
+    renderBackendMission(
+      result
+    );
 
     await loadRobot();
 
@@ -1029,11 +1279,16 @@ async function runMission() {
 
   } catch (error) {
 
-    console.error("Mission execution error:", error);
+    console.error(
+      "Mission execution error:",
+      error
+    );
 
     stopVisualMission();
 
-    setMissionStatus("FAILED");
+    setMissionStatus(
+      "FAILED"
+    );
 
     el("verificationResult").textContent =
       "FAILED";
@@ -1041,10 +1296,11 @@ async function runMission() {
     el("backendResult").textContent =
       JSON.stringify(
         {
-          error: error.message,
+          error:
+            error.message,
+
           note:
-            "No browser-local mission result was created. " +
-            "The backend remains authoritative."
+            "No browser-local mission result was created. The backend remains authoritative."
         },
         null,
         2
@@ -1057,10 +1313,14 @@ async function runMission() {
 
   } finally {
 
-    state.running = false;
+    state.running =
+      false;
 
-    runButton.disabled = false;
-    runButton.textContent = "Run Mission";
+    runButton.disabled =
+      false;
+
+    runButton.textContent =
+      "Run Mission";
 
   }
 }
@@ -1076,42 +1336,70 @@ function startVisualMission() {
 
   let step = 0;
 
-  const totalSteps = 10;
+  const totalSteps =
+    10;
 
-  updateRobotPosition(0, 0);
+  updateRobotPosition(
+    0,
+    0
+  );
 
-  el("progress").style.width = "0%";
+  el("progress").style.width =
+    "0%";
 
-  state.timer = setInterval(() => {
+  state.timer =
+    setInterval(
+      () => {
 
-    step++;
+        step++;
 
-    const ratio =
-      Math.min(step / totalSteps, 1);
+        const ratio =
+          Math.min(
+            step / totalSteps,
+            1
+          );
 
-    const x =
-      Math.round(10 * ratio * 100) / 100;
+        const x =
+          Math.round(
+            10 * ratio * 100
+          ) / 100;
 
-    const y =
-      Math.round(10 * ratio * 100) / 100;
+        const y =
+          Math.round(
+            10 * ratio * 100
+          ) / 100;
 
-    updateRobotPosition(x, y);
+        updateRobotPosition(
+          x,
+          y
+        );
 
-    el("progress").style.width =
-      `${Math.round(ratio * 100)}%`;
+        el("progress").style.width =
+          `${Math.round(
+            ratio * 100
+          )}%`;
 
-    addTelemetry({
-      step,
-      x,
-      y,
-      progress: Math.round(ratio * 100)
-    });
+        addTelemetry({
+          step,
+          x,
+          y,
+          progress:
+            Math.round(
+              ratio * 100
+            )
+        });
 
-    if (step >= totalSteps) {
-      stopVisualMission();
-    }
+        if (
+          step >= totalSteps
+        ) {
 
-  }, 350);
+          stopVisualMission();
+
+        }
+
+      },
+      350
+    );
 }
 
 
@@ -1119,9 +1407,13 @@ function finishVisualMission() {
 
   stopVisualMission();
 
-  updateRobotPosition(10, 10);
+  updateRobotPosition(
+    10,
+    10
+  );
 
-  el("progress").style.width = "100%";
+  el("progress").style.width =
+    "100%";
 }
 
 
@@ -1129,9 +1421,12 @@ function stopVisualMission() {
 
   if (state.timer) {
 
-    clearInterval(state.timer);
+    clearInterval(
+      state.timer
+    );
 
-    state.timer = null;
+    state.timer =
+      null;
   }
 }
 
@@ -1140,22 +1435,47 @@ function stopVisualMission() {
    ROBOT POSITION
    ========================================================= */
 
-function updateRobotPosition(x, y) {
+function updateRobotPosition(
+  x,
+  y
+) {
 
   const left =
-    12 + ((Number(x) / 10) * 76);
+    12 +
+    (
+      Number(x) /
+      10
+    ) *
+    76;
 
   const top =
-    82 - ((Number(y) / 10) * 64);
+    82 -
+    (
+      Number(y) /
+      10
+    ) *
+    64;
 
   const robotPoint =
     el("robotPoint");
 
   robotPoint.style.left =
-    `${Math.max(12, Math.min(88, left))}%`;
+    `${Math.max(
+      12,
+      Math.min(
+        88,
+        left
+      )
+    )}%`;
 
   robotPoint.style.top =
-    `${Math.max(18, Math.min(82, top))}%`;
+    `${Math.max(
+      18,
+      Math.min(
+        82,
+        top
+      )
+    )}%`;
 }
 
 
@@ -1165,17 +1485,22 @@ function updateRobotPosition(x, y) {
 
 function resetTelemetry() {
 
-  el("telemetry").innerHTML = "";
+  el("telemetry").innerHTML =
+    "";
 }
 
 
-function addTelemetry(point) {
+function addTelemetry(
+  point
+) {
 
   const container =
     el("telemetry");
 
   const row =
-    document.createElement("div");
+    document.createElement(
+      "div"
+    );
 
   row.className =
     "telemetry-row";
@@ -1185,7 +1510,9 @@ function addTelemetry(point) {
     `Position (${point.x}, ${point.y}) · ` +
     `${point.progress}%`;
 
-  container.appendChild(row);
+  container.appendChild(
+    row
+  );
 
   container.scrollTop =
     container.scrollHeight;
@@ -1196,10 +1523,13 @@ function addTelemetry(point) {
    RENDER BACKEND MISSION
    ========================================================= */
 
-function renderBackendMission(result) {
+function renderBackendMission(
+  result
+) {
 
   const mission =
-    result.mission || result;
+    result.mission ||
+    result;
 
   const missionId =
     mission.missionId ||
@@ -1207,7 +1537,9 @@ function renderBackendMission(result) {
     "—";
 
   const telemetry =
-    Array.isArray(mission.telemetry)
+    Array.isArray(
+      mission.telemetry
+    )
       ? mission.telemetry
       : [];
 
@@ -1276,7 +1608,8 @@ function renderBackendMission(result) {
   el("evidenceId").textContent =
     evidenceId;
 
-  el("exportButton").disabled = false;
+  el("exportButton").disabled =
+    false;
 
   el("backendResult").textContent =
     JSON.stringify(
@@ -1296,22 +1629,29 @@ function renderTelemetryFromBackend(
 ) {
 
   if (
-    !Array.isArray(telemetry) ||
+    !Array.isArray(
+      telemetry
+    ) ||
     telemetry.length === 0
   ) {
+
     return;
+
   }
 
   const container =
     el("telemetry");
 
-  container.innerHTML = "";
+  container.innerHTML =
+    "";
 
   telemetry.forEach(
     (point, index) => {
 
       const row =
-        document.createElement("div");
+        document.createElement(
+          "div"
+        );
 
       row.className =
         "telemetry-row";
@@ -1334,13 +1674,17 @@ function renderTelemetryFromBackend(
       row.textContent =
         `Step ${step} · Position (${x}, ${y})`;
 
-      container.appendChild(row);
+      container.appendChild(
+        row
+      );
 
     }
   );
 
   const last =
-    telemetry[telemetry.length - 1];
+    telemetry[
+      telemetry.length - 1
+    ];
 
   const lastX =
     last?.x ??
@@ -1380,50 +1724,23 @@ function renderValidation(
     return;
   }
 
-  /*
-   * The ON1 Physical AI backend returns:
-   *
-   * validatorResult: {
-   *   validatorId: "...",
-   *   validatedAt: "...",
-   *   checks: {
-   *     missionStarted: true,
-   *     missionCompleted: true,
-   *     telemetryPresent: true,
-   *     targetReached: true,
-   *     robotIdentityPresent: true,
-   *     evidenceGenerated: true
-   *   },
-   *   passedChecks: 6,
-   *   totalChecks: 6,
-   *   verified: true
-   * }
-   *
-   * `checks` is an OBJECT, not an ARRAY.
-   *
-   * The previous renderer incorrectly inspected the
-   * validator metadata itself and therefore displayed
-   * Validator ID / Validated At / Passed Checks / Total
-   * Checks as FAILED.
-   *
-   * This renderer explicitly reads validator.checks.
-   */
-
   const checks =
     validator.checks &&
-    typeof validator.checks === "object" &&
-    !Array.isArray(validator.checks)
+    typeof validator.checks ===
+      "object" &&
+    !Array.isArray(
+      validator.checks
+    )
       ? validator.checks
       : null;
 
   if (!checks) {
 
-    /*
-     * Backward compatibility for any future backend
-     * response where checks may be returned as an array.
-     */
-
-    if (Array.isArray(validator.checks)) {
+    if (
+      Array.isArray(
+        validator.checks
+      )
+    ) {
 
       renderValidationArray(
         container,
@@ -1445,17 +1762,19 @@ function renderValidation(
     return;
   }
 
-  let html = "";
+  let html =
+    "";
 
-  /*
-   * Validator metadata
-   */
-
-  if (validator.validatorId) {
+  if (
+    validator.validatorId
+  ) {
 
     html += `
       <div class="row">
-        <span class="label">Validator ID</span>
+        <span class="label">
+          Validator ID
+        </span>
+
         <span class="value">
           ${escapeHtml(
             validator.validatorId
@@ -1466,11 +1785,16 @@ function renderValidation(
 
   }
 
-  if (validator.validatedAt) {
+  if (
+    validator.validatedAt
+  ) {
 
     html += `
       <div class="row">
-        <span class="label">Validated At</span>
+        <span class="label">
+          Validated At
+        </span>
+
         <span class="value">
           ${escapeHtml(
             validator.validatedAt
@@ -1481,17 +1805,21 @@ function renderValidation(
 
   }
 
-  /*
-   * Individual validation checks
-   */
-
-  Object.entries(checks).forEach(
+  Object.entries(
+    checks
+  ).forEach(
     ([key, value]) => {
 
       const passed =
         value === true ||
-        String(value).toLowerCase() === "passed" ||
-        String(value).toLowerCase() === "pass";
+        String(
+          value
+        ).toLowerCase() ===
+          "passed" ||
+        String(
+          value
+        ).toLowerCase() ===
+          "pass";
 
       html += `
         <div class="check">
@@ -1501,8 +1829,16 @@ function renderValidation(
             )}
           </span>
 
-          <span class="${passed ? "pass" : "fail"}">
-            ${passed ? "PASSED" : "FAILED"}
+          <span class="${
+            passed
+              ? "pass"
+              : "fail"
+          }">
+            ${
+              passed
+                ? "PASSED"
+                : "FAILED"
+            }
           </span>
         </div>
       `;
@@ -1510,17 +1846,17 @@ function renderValidation(
     }
   );
 
-  /*
-   * Validation summary
-   */
-
   if (
-    validator.passedChecks !== undefined
+    validator.passedChecks !==
+    undefined
   ) {
 
     html += `
       <div class="row">
-        <span class="label">Passed Checks</span>
+        <span class="label">
+          Passed Checks
+        </span>
+
         <span class="value">
           ${escapeHtml(
             String(
@@ -1534,12 +1870,16 @@ function renderValidation(
   }
 
   if (
-    validator.totalChecks !== undefined
+    validator.totalChecks !==
+    undefined
   ) {
 
     html += `
       <div class="row">
-        <span class="label">Total Checks</span>
+        <span class="label">
+          Total Checks
+        </span>
+
         <span class="value">
           ${escapeHtml(
             String(
@@ -1552,19 +1892,26 @@ function renderValidation(
 
   }
 
-  /*
-   * Final verification state
-   */
-
   const verified =
-    validator.verified === true;
+    validator.verified ===
+    true;
 
   html += `
     <div class="check">
-      <span>Verified</span>
+      <span>
+        Verified
+      </span>
 
-      <span class="${verified ? "pass" : "fail"}">
-        ${verified ? "PASSED" : "FAILED"}
+      <span class="${
+        verified
+          ? "pass"
+          : "fail"
+      }">
+        ${
+          verified
+            ? "PASSED"
+            : "FAILED"
+        }
       </span>
     </div>
   `;
@@ -1583,13 +1930,19 @@ function renderValidationArray(
   validator
 ) {
 
-  let html = "";
+  let html =
+    "";
 
-  if (validator.validatorId) {
+  if (
+    validator.validatorId
+  ) {
 
     html += `
       <div class="row">
-        <span class="label">Validator ID</span>
+        <span class="label">
+          Validator ID
+        </span>
+
         <span class="value">
           ${escapeHtml(
             validator.validatorId
@@ -1600,11 +1953,16 @@ function renderValidationArray(
 
   }
 
-  if (validator.validatedAt) {
+  if (
+    validator.validatedAt
+  ) {
 
     html += `
       <div class="row">
-        <span class="label">Validated At</span>
+        <span class="label">
+          Validated At
+        </span>
+
         <span class="value">
           ${escapeHtml(
             validator.validatedAt
@@ -1627,8 +1985,10 @@ function renderValidationArray(
       const passed =
         check.passed === true ||
         check.valid === true ||
-        check.status === "PASSED" ||
-        check.status === "PASS";
+        check.status ===
+          "PASSED" ||
+        check.status ===
+          "PASS";
 
       html += `
         <div class="check">
@@ -1638,8 +1998,16 @@ function renderValidationArray(
             )}
           </span>
 
-          <span class="${passed ? "pass" : "fail"}">
-            ${passed ? "PASSED" : "FAILED"}
+          <span class="${
+            passed
+              ? "pass"
+              : "fail"
+          }">
+            ${
+              passed
+                ? "PASSED"
+                : "FAILED"
+            }
           </span>
         </div>
       `;
@@ -1648,12 +2016,16 @@ function renderValidationArray(
   );
 
   if (
-    validator.passedChecks !== undefined
+    validator.passedChecks !==
+    undefined
   ) {
 
     html += `
       <div class="row">
-        <span class="label">Passed Checks</span>
+        <span class="label">
+          Passed Checks
+        </span>
+
         <span class="value">
           ${escapeHtml(
             String(
@@ -1667,12 +2039,16 @@ function renderValidationArray(
   }
 
   if (
-    validator.totalChecks !== undefined
+    validator.totalChecks !==
+    undefined
   ) {
 
     html += `
       <div class="row">
-        <span class="label">Total Checks</span>
+        <span class="label">
+          Total Checks
+        </span>
+
         <span class="value">
           ${escapeHtml(
             String(
@@ -1686,14 +2062,25 @@ function renderValidationArray(
   }
 
   const verified =
-    validator.verified === true;
+    validator.verified ===
+    true;
 
   html += `
     <div class="check">
-      <span>Verified</span>
+      <span>
+        Verified
+      </span>
 
-      <span class="${verified ? "pass" : "fail"}">
-        ${verified ? "PASSED" : "FAILED"}
+      <span class="${
+        verified
+          ? "pass"
+          : "fail"
+      }">
+        ${
+          verified
+            ? "PASSED"
+            : "FAILED"
+        }
       </span>
     </div>
   `;
@@ -1730,17 +2117,23 @@ function renderEvidence(
     evidence.evidenceArtifact ||
     null;
 
-  let html = "";
+  let html =
+    "";
 
-  Object.entries(evidence).forEach(
+  Object.entries(
+    evidence
+  ).forEach(
     ([key, value]) => {
 
       if (
         value === null ||
         value === undefined ||
-        typeof value === "object"
+        typeof value ===
+          "object"
       ) {
+
         return;
+
       }
 
       html += `
@@ -1819,31 +2212,44 @@ function setMissionStatus(
     "status";
 
   if (
-    normalized === "RUNNING" ||
-    normalized === "EXECUTING"
+    normalized ===
+      "RUNNING" ||
+    normalized ===
+      "EXECUTING"
   ) {
+
     element.classList.add(
       "running"
     );
+
   }
 
   if (
-    normalized === "COMPLETED" ||
-    normalized === "VERIFIED" ||
-    normalized === "SUCCESS"
+    normalized ===
+      "COMPLETED" ||
+    normalized ===
+      "VERIFIED" ||
+    normalized ===
+      "SUCCESS"
   ) {
+
     element.classList.add(
       "success"
     );
+
   }
 
   if (
-    normalized === "FAILED" ||
-    normalized === "ERROR"
+    normalized ===
+      "FAILED" ||
+    normalized ===
+      "ERROR"
   ) {
+
     element.classList.add(
       "failed"
     );
+
   }
 }
 
@@ -1854,36 +2260,54 @@ function verificationResultText(
 ) {
 
   if (
-    typeof verification === "string"
+    typeof verification ===
+    "string"
   ) {
+
     return verification;
+
   }
 
   if (
     verification &&
-    typeof verification === "object"
+    typeof verification ===
+      "object"
   ) {
 
-    if (verification.result) {
-      return verification.result;
-    }
+    if (
+      verification.result
+    ) {
 
-    if (verification.status) {
-      return verification.status;
+      return verification.result;
+
     }
 
     if (
-      verification.verified === true
+      verification.status
     ) {
-      return "VERIFIED";
+
+      return verification.status;
+
     }
+
+    if (
+      verification.verified ===
+      true
+    ) {
+
+      return "VERIFIED";
+
+    }
+
   }
 
   if (
     String(status).toUpperCase() ===
     "COMPLETED"
   ) {
+
     return "VERIFIED";
+
   }
 
   return String(
@@ -1900,10 +2324,16 @@ async function resetMission() {
 
   stopVisualMission();
 
-  state.mission = null;
-  state.latestBackendResult = null;
+  state.mission =
+    null;
 
-  updateRobotPosition(0, 0);
+  state.latestBackendResult =
+    null;
+
+  updateRobotPosition(
+    0,
+    0
+  );
 
   el("progress").style.width =
     "0%";
@@ -1960,7 +2390,9 @@ function exportEvidence() {
   if (
     !state.latestBackendResult
   ) {
+
     return;
+
   }
 
   const blob =
@@ -1973,15 +2405,20 @@ function exportEvidence() {
         )
       ],
       {
-        type: "application/json"
+        type:
+          "application/json"
       }
     );
 
   const url =
-    URL.createObjectURL(blob);
+    URL.createObjectURL(
+      blob
+    );
 
   const link =
-    document.createElement("a");
+    document.createElement(
+      "a"
+    );
 
   link.href =
     url;
@@ -1997,13 +2434,17 @@ function exportEvidence() {
   link.download =
     `on1-physical-ai-${missionId}.json`;
 
-  document.body.appendChild(link);
+  document.body.appendChild(
+    link
+  );
 
   link.click();
 
   link.remove();
 
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(
+    url
+  );
 }
 
 
@@ -2011,9 +2452,13 @@ function exportEvidence() {
    FORMATTING
    ========================================================= */
 
-function formatLabel(value) {
+function formatLabel(
+  value
+) {
 
-  return String(value)
+  return String(
+    value
+  )
     .replace(
       /([A-Z])/g,
       " $1"
@@ -2029,14 +2474,19 @@ function formatLabel(value) {
     .trim()
     .replace(
       /^./,
-      char => char.toUpperCase()
+      char =>
+        char.toUpperCase()
     );
 }
 
 
-function escapeHtml(value) {
+function escapeHtml(
+  value
+) {
 
-  return String(value)
+  return String(
+    value
+  )
     .replace(
       /&/g,
       "&amp;"
@@ -2066,8 +2516,22 @@ function escapeHtml(value) {
 
 window.addEventListener(
   "DOMContentLoaded",
-  () => {
-    loadRobot();
+  async () => {
+
+    /*
+     * First load the authoritative robot/Firebase state.
+     */
+
+    await loadRobot();
+
+    /*
+     * Then restore the latest persisted mission.
+     *
+     * This does NOT execute a new mission.
+     */
+
+    await loadLatestMission();
+
   }
 );
 
