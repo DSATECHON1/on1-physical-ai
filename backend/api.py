@@ -35,10 +35,12 @@ def send_json(handler, status_code, payload):
     ).encode("utf-8")
 
     handler.send_response(status_code)
+
     handler.send_header(
         "Content-Type",
         "application/json; charset=utf-8",
     )
+
     handler.send_header(
         "Content-Length",
         str(len(body)),
@@ -49,10 +51,12 @@ def send_json(handler, status_code, payload):
         "Access-Control-Allow-Origin",
         "*",
     )
+
     handler.send_header(
         "Access-Control-Allow-Methods",
         "GET, POST, OPTIONS",
     )
+
     handler.send_header(
         "Access-Control-Allow-Headers",
         "Content-Type",
@@ -65,6 +69,7 @@ def send_json(handler, status_code, payload):
     )
 
     handler.end_headers()
+
     handler.wfile.write(body)
 
 
@@ -220,12 +225,304 @@ def build_latest_mission_result(mission):
 
 
 # ============================================================
+# KONNEX SUBMISSION READINESS
+# ============================================================
+
+def build_konnex_submission_package(mission):
+    """
+    Build a READ-ONLY Konnex submission package from the
+    latest persisted and verified mission.
+
+    IMPORTANT:
+
+    This function does NOT:
+    - submit anything to Konnex
+    - contact a Konnex API
+    - modify Firebase
+    - modify the mission
+    - change Konnex verification status
+    - change on-chain status
+    - change physical hardware status
+
+    It only verifies whether the persisted evidence currently
+    satisfies the local ON1 requirements for a future Konnex
+    submission.
+
+    Readiness requires:
+
+    1. Mission exists.
+    2. Mission status is COMPLETED.
+    3. Validator reports verified=True.
+    4. All six validation checks passed.
+    5. PoPW-style score exists.
+    6. Canonical evidence fingerprint exists.
+    7. Konnex adapter exists.
+    8. Konnex adapter status is READY_FOR_KONNEX_REVIEW.
+    9. submittedToKonnex remains False.
+    10. konnexVerified remains False.
+    11. onChainVerified remains False.
+    12. physicalHardware remains False.
+    """
+
+    if not mission:
+        return {
+            "ready": False,
+            "reason": "No persisted mission evidence was found.",
+        }
+
+    mission_status = mission.get(
+        "status"
+    )
+
+    validator = mission.get(
+        "validatorResult",
+        {},
+    )
+
+    fingerprint = mission.get(
+        "evidenceFingerprint",
+        {},
+    )
+
+    konnex_adapter = mission.get(
+        "konnexAdapter",
+        {},
+    )
+
+    evidence_artifact = mission.get(
+        "evidenceArtifact",
+        {},
+    )
+
+    checks = {}
+
+    checks["missionExists"] = True
+
+    checks["missionCompleted"] = (
+        mission_status == "COMPLETED"
+    )
+
+    checks["missionVerified"] = (
+        validator.get("verified") is True
+    )
+
+    checks["validationComplete"] = (
+        validator.get("passedChecks") == 6
+        and validator.get("totalChecks") == 6
+    )
+
+    checks["powpScorePresent"] = (
+        mission.get("powpScore") is not None
+    )
+
+    checks["evidenceFingerprintPresent"] = (
+        bool(
+            fingerprint
+        )
+    )
+
+    checks["canonicalFingerprintPresent"] = (
+        bool(
+            fingerprint.get(
+                "fingerprint"
+            )
+        )
+    )
+
+    checks["konnexAdapterPresent"] = (
+        bool(
+            konnex_adapter
+        )
+    )
+
+    checks["konnexAdapterReady"] = (
+        konnex_adapter.get(
+            "status"
+        )
+        == "READY_FOR_KONNEX_REVIEW"
+    )
+
+    checks["notSubmittedToKonnex"] = (
+        konnex_adapter.get(
+            "submittedToKonnex",
+            False,
+        )
+        is False
+    )
+
+    checks["notKonnexVerified"] = (
+        konnex_adapter.get(
+            "konnexVerified",
+            False,
+        )
+        is False
+    )
+
+    checks["notOnChainVerified"] = (
+        konnex_adapter.get(
+            "onChainVerified",
+            False,
+        )
+        is False
+    )
+
+    checks["physicalHardwareNotClaimed"] = (
+        konnex_adapter.get(
+            "physicalHardware",
+            False,
+        )
+        is False
+    )
+
+    checks["evidenceArtifactPresent"] = (
+        bool(
+            evidence_artifact
+        )
+    )
+
+    checks["evidenceArtifactFingerprintMatches"] = (
+        bool(
+            evidence_artifact.get(
+                "sha256"
+            )
+        )
+        and evidence_artifact.get(
+            "sha256"
+        )
+        == fingerprint.get(
+            "fingerprint"
+        )
+    )
+
+    ready = all(
+        checks.values()
+    )
+
+    failed_checks = [
+        name
+        for name, passed
+        in checks.items()
+        if not passed
+    ]
+
+    return {
+        "ready": ready,
+
+        "status": (
+            "READY_FOR_KONNEX_SUBMISSION"
+            if ready
+            else "NOT_READY_FOR_KONNEX_SUBMISSION"
+        ),
+
+        "submission": {
+            "submitted": False,
+            "submittedToKonnex": False,
+            "konnexVerified": False,
+            "onChainVerified": False,
+            "physicalHardware": False,
+        },
+
+        "project": PROJECT_NAME,
+
+        "prototypeVersion": PROTOTYPE_VERSION,
+
+        "adapter": {
+            "schema": konnex_adapter.get(
+                "schema"
+            ),
+            "name": konnex_adapter.get(
+                "name"
+            ),
+            "version": konnex_adapter.get(
+                "version"
+            ),
+            "status": konnex_adapter.get(
+                "status"
+            ),
+        },
+
+        "mission": {
+            "missionId": mission.get(
+                "missionId"
+            ),
+            "robotId": mission.get(
+                "robotId"
+            ),
+            "taskType": mission.get(
+                "taskType"
+            ),
+            "status": mission_status,
+            "powpScore": mission.get(
+                "powpScore"
+            ),
+        },
+
+        "evidence": {
+            "evidenceId": (
+                mission.get(
+                    "evidence",
+                    {},
+                ).get(
+                    "evidenceId"
+                )
+            ),
+            "fingerprint": fingerprint.get(
+                "fingerprint"
+            ),
+            "algorithm": fingerprint.get(
+                "algorithm",
+                "SHA-256",
+            ),
+            "artifactSha256": (
+                evidence_artifact.get(
+                    "sha256"
+                )
+            ),
+        },
+
+        "validation": {
+            "verified": validator.get(
+                "verified"
+            ),
+            "passedChecks": validator.get(
+                "passedChecks"
+            ),
+            "totalChecks": validator.get(
+                "totalChecks"
+            ),
+        },
+
+        "checks": checks,
+
+        "failedChecks": failed_checks,
+
+        "source": {
+            "type": "firebase",
+            "readOnly": True,
+            "firebaseMutation": False,
+        },
+
+        "integration": {
+            "physicalHardware": False,
+            "konnex": False,
+            "onChain": False,
+        },
+
+        "note": (
+            "This is a local ON1 submission-readiness package. "
+            "It does not submit data to Konnex and does not "
+            "represent a live Konnex or on-chain transaction."
+        ),
+    }
+
+
+# ============================================================
 # API HANDLER
 # ============================================================
 
 class ON1APIHandler(BaseHTTPRequestHandler):
 
-    server_version = "ON1PhysicalAI/0.5.1"
+    server_version = "ON1PhysicalAI/0.5.2"
 
     def log_message(self, format_string, *args):
         """
@@ -244,20 +541,24 @@ class ON1APIHandler(BaseHTTPRequestHandler):
     # --------------------------------------------------------
 
     def do_OPTIONS(self):
+
         self.send_response(204)
 
         self.send_header(
             "Access-Control-Allow-Origin",
             "*",
         )
+
         self.send_header(
             "Access-Control-Allow-Methods",
             "GET, POST, OPTIONS",
         )
+
         self.send_header(
             "Access-Control-Allow-Headers",
             "Content-Type",
         )
+
         self.send_header(
             "Access-Control-Max-Age",
             "86400",
@@ -290,6 +591,9 @@ class ON1APIHandler(BaseHTTPRequestHandler):
             elif path == "/missions/latest":
                 handle_latest_mission(self)
 
+            elif path == "/konnex/submission/latest":
+                handle_konnex_submission_latest(self)
+
             else:
 
                 send_json(
@@ -303,6 +607,7 @@ class ON1APIHandler(BaseHTTPRequestHandler):
                             "GET /health",
                             "GET /robot",
                             "GET /missions/latest",
+                            "GET /konnex/submission/latest",
                             "POST /missions",
                         ],
                     },
@@ -353,6 +658,7 @@ class ON1APIHandler(BaseHTTPRequestHandler):
                             "GET /health",
                             "GET /robot",
                             "GET /missions/latest",
+                            "GET /konnex/submission/latest",
                             "POST /missions",
                         ],
                     },
@@ -412,13 +718,16 @@ def handle_root(handler):
 
             "status": "online",
 
-            "apiVersion": "0.3",
+            "apiVersion": "0.4",
 
             "endpoints": {
                 "health": "GET /health",
                 "robot": "GET /robot",
                 "latestMission": (
                     "GET /missions/latest"
+                ),
+                "konnexSubmissionReadiness": (
+                    "GET /konnex/submission/latest"
                 ),
                 "missions": "POST /missions",
             },
@@ -521,6 +830,68 @@ def handle_latest_mission(handler):
             "found": True,
 
             **result,
+        },
+    )
+
+
+# ============================================================
+# GET /konnex/submission/latest
+# ============================================================
+
+def handle_konnex_submission_latest(handler):
+
+    """
+    Read-only endpoint exposing the current ON1 Konnex
+    submission-readiness package.
+
+    No Firebase mutation occurs.
+    No Konnex submission occurs.
+    """
+
+    mission = load_latest_mission()
+
+    if mission is None:
+
+        send_json(
+            handler,
+            404,
+            {
+                "found": False,
+
+                "ready": False,
+
+                "status": (
+                    "NOT_READY_FOR_KONNEX_SUBMISSION"
+                ),
+
+                "message": (
+                    "No persisted mission evidence "
+                    "was found."
+                ),
+
+                "submission": {
+                    "submitted": False,
+                    "submittedToKonnex": False,
+                    "konnexVerified": False,
+                    "onChainVerified": False,
+                    "physicalHardware": False,
+                },
+            },
+        )
+
+        return
+
+    package = build_konnex_submission_package(
+        mission
+    )
+
+    send_json(
+        handler,
+        200,
+        {
+            "found": True,
+
+            **package,
         },
     )
 
@@ -733,6 +1104,11 @@ def run_server():
     )
 
     print(
+        "  GET  /konnex/submission/latest",
+        flush=True,
+    )
+
+    print(
         "  POST /missions",
         flush=True,
     )
@@ -928,6 +1304,51 @@ class SelfTestEngine:
             },
 
             "powpScore": 100,
+
+            "evidenceFingerprint": {
+
+                "fingerprint": (
+                    "self-test-canonical-fingerprint"
+                ),
+
+                "algorithm": "SHA-256",
+
+            },
+
+            "konnexAdapter": {
+
+                "schema": (
+                    "on1.physical-ai.konnex-mission.v1"
+                ),
+
+                "name": (
+                    "ON1 Konnex Adapter"
+                ),
+
+                "version": "0.1.0",
+
+                "status": (
+                    "READY_FOR_KONNEX_REVIEW"
+                ),
+
+                "submittedToKonnex": False,
+
+                "konnexVerified": False,
+
+                "onChainVerified": False,
+
+                "physicalHardware": False,
+            },
+
+            "evidenceArtifact": {
+
+                "sha256": (
+                    "self-test-canonical-fingerprint"
+                ),
+
+                "algorithm": "SHA-256",
+
+            },
         }
 
 
@@ -948,7 +1369,7 @@ def self_test_export_evidence(
             "mission-result.json"
         ),
 
-        "self-test-sha256-fingerprint",
+        "self-test-canonical-fingerprint",
     )
 
 
@@ -1090,11 +1511,18 @@ def run_self_test():
     global robot
     global engine
     global export_evidence
+    global load_latest_mission
 
     original_robot = robot
+
     original_engine = engine
+
     original_export_evidence = (
         export_evidence
+    )
+
+    original_load_latest_mission = (
+        load_latest_mission
     )
 
     test_server = None
@@ -1172,6 +1600,24 @@ def run_self_test():
                 "project"
             ) == PROJECT_NAME,
             "GET / must report the correct project.",
+        )
+
+        assert_condition(
+            data.get(
+                "apiVersion"
+            ) == "0.4",
+            "GET / must report API version 0.4.",
+        )
+
+        assert_condition(
+            data.get(
+                "endpoints",
+                {},
+            ).get(
+                "konnexSubmissionReadiness"
+            )
+            == "GET /konnex/submission/latest",
+            "GET / must expose the Konnex readiness endpoint.",
         )
 
         # ----------------------------------------------------
@@ -1318,7 +1764,7 @@ def run_self_test():
             evidence_artifact.get(
                 "sha256"
             )
-            == "self-test-sha256-fingerprint",
+            == "self-test-canonical-fingerprint",
             "Evidence artifact fingerprint must be returned.",
         )
 
@@ -1334,6 +1780,240 @@ def run_self_test():
                 "onChainVerified"
             ) is False,
             "Self-test must report on-chain verification as false.",
+        )
+
+        # ----------------------------------------------------
+        # Prepare isolated latest mission for the new
+        # read-only Konnex readiness endpoint.
+        # ----------------------------------------------------
+
+        self_test_latest_mission = dict(
+            mission
+        )
+
+        self_test_latest_mission[
+            "persistedAt"
+        ] = (
+            "2026-01-01T00:00:02+00:00"
+        )
+
+        # Ensure the self-test evidence fingerprint and
+        # artifact use the exact same canonical value.
+        self_test_latest_mission[
+            "evidenceFingerprint"
+        ] = {
+            "fingerprint": (
+                "self-test-canonical-fingerprint"
+            ),
+            "algorithm": "SHA-256",
+        }
+
+        self_test_latest_mission[
+            "konnexAdapter"
+        ] = {
+            "schema": (
+                "on1.physical-ai.konnex-mission.v1"
+            ),
+            "name": (
+                "ON1 Konnex Adapter"
+            ),
+            "version": "0.1.0",
+            "status": (
+                "READY_FOR_KONNEX_REVIEW"
+            ),
+            "submittedToKonnex": False,
+            "konnexVerified": False,
+            "onChainVerified": False,
+            "physicalHardware": False,
+        }
+
+        self_test_latest_mission[
+            "evidenceArtifact"
+        ] = {
+            "sha256": (
+                "self-test-canonical-fingerprint"
+            ),
+            "algorithm": "SHA-256",
+        }
+
+        def self_test_load_latest_mission():
+
+            return self_test_latest_mission
+
+        load_latest_mission = (
+            self_test_load_latest_mission
+        )
+
+        # ----------------------------------------------------
+        # GET /konnex/submission/latest
+        # ----------------------------------------------------
+
+        status, data = api_request(
+            base_url,
+            "GET",
+            "/konnex/submission/latest",
+        )
+
+        assert_condition(
+            status == 200,
+            "GET /konnex/submission/latest must return HTTP 200.",
+        )
+
+        assert_condition(
+            data.get(
+                "found"
+            ) is True,
+            "Konnex readiness endpoint must find the test mission.",
+        )
+
+        assert_condition(
+            data.get(
+                "ready"
+            ) is True,
+            "Konnex readiness package must report ready=True.",
+        )
+
+        assert_condition(
+            data.get(
+                "status"
+            )
+            == "READY_FOR_KONNEX_SUBMISSION",
+            "Konnex readiness status must report READY_FOR_KONNEX_SUBMISSION.",
+        )
+
+        assert_condition(
+            data.get(
+                "submission",
+                {},
+            ).get(
+                "submittedToKonnex"
+            ) is False,
+            "Konnex readiness must never claim submission occurred.",
+        )
+
+        assert_condition(
+            data.get(
+                "submission",
+                {},
+            ).get(
+                "konnexVerified"
+            ) is False,
+            "Konnex verification must remain false.",
+        )
+
+        assert_condition(
+            data.get(
+                "submission",
+                {},
+            ).get(
+                "onChainVerified"
+            ) is False,
+            "On-chain verification must remain false.",
+        )
+
+        assert_condition(
+            data.get(
+                "submission",
+                {},
+            ).get(
+                "physicalHardware"
+            ) is False,
+            "Physical hardware integration must remain false.",
+        )
+
+        assert_condition(
+            data.get(
+                "adapter",
+                {},
+            ).get(
+                "status"
+            )
+            == "READY_FOR_KONNEX_REVIEW",
+            "Konnex adapter must be READY_FOR_KONNEX_REVIEW.",
+        )
+
+        assert_condition(
+            data.get(
+                "evidence",
+                {},
+            ).get(
+                "fingerprint"
+            )
+            == "self-test-canonical-fingerprint",
+            "Konnex package must expose the canonical evidence fingerprint.",
+        )
+
+        assert_condition(
+            data.get(
+                "evidence",
+                {},
+            ).get(
+                "artifactSha256"
+            )
+            == data.get(
+                "evidence",
+                {},
+            ).get(
+                "fingerprint"
+            ),
+            "Evidence artifact SHA-256 must match the canonical fingerprint.",
+        )
+
+        assert_condition(
+            data.get(
+                "validation",
+                {},
+            ).get(
+                "verified"
+            ) is True,
+            "Konnex package must require verified=True.",
+        )
+
+        assert_condition(
+            data.get(
+                "validation",
+                {},
+            ).get(
+                "passedChecks"
+            ) == 6,
+            "Konnex package must require all 6 validation checks.",
+        )
+
+        assert_condition(
+            data.get(
+                "validation",
+                {},
+            ).get(
+                "totalChecks"
+            ) == 6,
+            "Konnex package must require 6 total validation checks.",
+        )
+
+        assert_condition(
+            data.get(
+                "failedChecks"
+            ) == [],
+            "Konnex package must contain no failed readiness checks.",
+        )
+
+        assert_condition(
+            data.get(
+                "source",
+                {},
+            ).get(
+                "readOnly"
+            ) is True,
+            "Konnex readiness endpoint must be read-only.",
+        )
+
+        assert_condition(
+            data.get(
+                "source",
+                {},
+            ).get(
+                "firebaseMutation"
+            ) is False,
+            "Konnex readiness endpoint must not mutate Firebase.",
         )
 
         # ----------------------------------------------------
@@ -1366,47 +2046,62 @@ def run_self_test():
         )
 
         print(
-            "GET /              PASS",
+            "GET /                         PASS",
             flush=True,
         )
 
         print(
-            "GET /health        PASS",
+            "GET /health                   PASS",
             flush=True,
         )
 
         print(
-            "GET /robot         PASS",
+            "GET /robot                    PASS",
             flush=True,
         )
 
         print(
-            "POST /missions     PASS",
+            "POST /missions                PASS",
             flush=True,
         )
 
         print(
-            "Validation 6/6     PASS",
+            "GET /konnex/submission/latest PASS",
             flush=True,
         )
 
         print(
-            "PoPW Score 100     PASS",
+            "Validation 6/6                PASS",
             flush=True,
         )
 
         print(
-            "Firebase mutation  NONE",
+            "PoPW Score 100                PASS",
             flush=True,
         )
 
         print(
-            "Production mission NONE",
+            "Canonical fingerprint         PASS",
             flush=True,
         )
 
         print(
-            "Latest mission     NOT TESTED",
+            "Konnex readiness              PASS",
+            flush=True,
+        )
+
+        print(
+            "Konnex submission             NONE",
+            flush=True,
+        )
+
+        print(
+            "Firebase mutation             NONE",
+            flush=True,
+        )
+
+        print(
+            "Production mission            NONE",
             flush=True,
         )
 
@@ -1427,6 +2122,10 @@ def run_self_test():
 
         export_evidence = (
             original_export_evidence
+        )
+
+        load_latest_mission = (
+            original_load_latest_mission
         )
 
         if test_server is not None:
