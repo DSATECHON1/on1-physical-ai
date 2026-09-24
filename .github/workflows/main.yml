@@ -28,6 +28,9 @@ jobs:
       - name: Check Python version
         run: python --version
 
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
       - name: Run backend mission engine
         env:
           ON1_CI_TEST: "1"
@@ -99,6 +102,9 @@ jobs:
 
       - name: Check Python version
         run: python --version
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
 
       - name: Run API self-test
         env:
