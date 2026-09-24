@@ -31,7 +31,9 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import uuid
+from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -94,6 +96,307 @@ EVIDENCE_FINGERPRINT_SCOPE = (
     "local ON1 mission evidence core"
 )
 
+# GitHub Actions isolated CI mode.
+#
+# Production Render does NOT set this variable.
+#
+# When enabled:
+# - Firebase credentials are not required
+# - no Firestore data is read
+# - no Firestore data is written
+# - device/memory/mission persistence exists only in memory
+#
+# This allows GitHub Actions to test the backend mission
+# engine without exposing or committing the Render secret.
+CI_TEST_MODE = os.getenv("ON1_CI_TEST") == "1"
+
+
+# ============================================================
+# CI IN-MEMORY PERSISTENCE
+# ============================================================
+
+_CI_DEVICE_STATE: dict[str, Any] = {
+    "name": "ON1 Physical AI Unit 01",
+    "connection_status": "online",
+    "operational_status": "idle",
+    "mission_count": 0,
+    "successful_missions": 0,
+    "failed_missions": 0,
+    "reputation": 50,
+}
+
+_CI_MEMORY: dict[str, dict[str, Any]] = {}
+
+_CI_MISSIONS: dict[str, dict[str, Any]] = {}
+
+
+class _CISnapshot:
+    """Minimal Firestore-compatible snapshot for CI tests."""
+
+    def __init__(
+        self,
+        data: dict[str, Any] | None,
+    ) -> None:
+        self._data = deepcopy(data)
+        self.exists = data is not None
+
+    def to_dict(self) -> dict[str, Any] | None:
+        if self._data is None:
+            return None
+
+        return deepcopy(self._data)
+
+
+class _CIDocumentReference:
+    """Minimal document reference used only in CI mode."""
+
+    def __init__(
+        self,
+        collection_name: str,
+        document_id: str,
+    ) -> None:
+        self.collection_name = collection_name
+        self.document_id = document_id
+
+    def get(self) -> _CISnapshot:
+        if self.collection_name == FIRESTORE_DEVICE_COLLECTION:
+            if self.document_id == FIRESTORE_DEVICE_ID:
+                return _CISnapshot(
+                    _CI_DEVICE_STATE
+                )
+
+        if (
+            self.collection_name
+            == FIRESTORE_MEMORY_COLLECTION
+        ):
+            memory = _CI_MEMORY.get(
+                self.document_id
+            )
+
+            return _CISnapshot(memory)
+
+        if (
+            self.collection_name
+            == FIRESTORE_MISSION_COLLECTION
+        ):
+            mission = _CI_MISSIONS.get(
+                self.document_id
+            )
+
+            return _CISnapshot(mission)
+
+        return _CISnapshot(None)
+
+    def set(
+        self,
+        data: dict[str, Any],
+        merge: bool = False,
+    ) -> None:
+        if self.collection_name == FIRESTORE_DEVICE_COLLECTION:
+            if self.document_id != FIRESTORE_DEVICE_ID:
+                return
+
+            if merge:
+                _CI_DEVICE_STATE.update(
+                    deepcopy(data)
+                )
+            else:
+                _CI_DEVICE_STATE.clear()
+                _CI_DEVICE_STATE.update(
+                    deepcopy(data)
+                )
+
+            return
+
+        if self.collection_name == FIRESTORE_MEMORY_COLLECTION:
+            existing = _CI_MEMORY.get(
+                self.document_id,
+                {},
+            )
+
+            if merge:
+                existing.update(
+                    deepcopy(data)
+                )
+                _CI_MEMORY[
+                    self.document_id
+                ] = existing
+            else:
+                _CI_MEMORY[
+                    self.document_id
+                ] = deepcopy(data)
+
+            return
+
+        if self.collection_name == FIRESTORE_MISSION_COLLECTION:
+            existing = _CI_MISSIONS.get(
+                self.document_id,
+                {},
+            )
+
+            if merge:
+                existing.update(
+                    deepcopy(data)
+                )
+                _CI_MISSIONS[
+                    self.document_id
+                ] = existing
+            else:
+                _CI_MISSIONS[
+                    self.document_id
+                ] = deepcopy(data)
+
+
+class _CIQuery:
+    """Minimal query implementation for API latest-mission reads."""
+
+    def __init__(
+        self,
+        collection_name: str,
+        order_field: str | None = None,
+        descending: bool = False,
+    ) -> None:
+        self.collection_name = collection_name
+        self.order_field = order_field
+        self.descending = descending
+
+    def order_by(
+        self,
+        field: str,
+        direction: Any = None,
+    ) -> "_CIQuery":
+        descending = False
+
+        if direction is not None:
+            direction_text = str(
+                direction
+            ).upper()
+
+            descending = (
+                "DESCENDING"
+                in direction_text
+            )
+
+        return _CIQuery(
+            collection_name=self.collection_name,
+            order_field=field,
+            descending=descending,
+        )
+
+    def stream(self):
+        if self.collection_name == FIRESTORE_MEMORY_COLLECTION:
+            records = list(
+                _CI_MEMORY.values()
+            )
+
+        elif (
+            self.collection_name
+            == FIRESTORE_MISSION_COLLECTION
+        ):
+            records = list(
+                _CI_MISSIONS.values()
+            )
+
+        else:
+            records = []
+
+        if self.order_field:
+            records.sort(
+                key=lambda record: (
+                    record.get(
+                        self.order_field,
+                        "",
+                    )
+                    or ""
+                ),
+                reverse=self.descending,
+            )
+
+        for record in records:
+            if (
+                self.collection_name
+                == FIRESTORE_MEMORY_COLLECTION
+            ):
+                document_id = record.get(
+                    "memoryId",
+                    "",
+                )
+            else:
+                document_id = record.get(
+                    "missionId",
+                    "",
+                )
+
+            yield _CISnapshot(record)
+
+
+class _CICollectionReference:
+    """Minimal collection reference used only in CI mode."""
+
+    def __init__(
+        self,
+        collection_name: str,
+    ) -> None:
+        self.collection_name = collection_name
+
+    def document(
+        self,
+        document_id: str,
+    ) -> _CIDocumentReference:
+        return _CIDocumentReference(
+            self.collection_name,
+            document_id,
+        )
+
+    def order_by(
+        self,
+        field: str,
+        direction: Any = None,
+    ) -> _CIQuery:
+        return _CIQuery(
+            collection_name=self.collection_name,
+        ).order_by(
+            field,
+            direction,
+        )
+
+    def stream(self):
+        return _CIQuery(
+            collection_name=self.collection_name
+        ).stream()
+
+
+class _CIDeviceReference:
+    """Root device reference with Firestore-like subcollections."""
+
+    def get(self) -> _CISnapshot:
+        return _CISnapshot(
+            _CI_DEVICE_STATE
+        )
+
+    def set(
+        self,
+        data: dict[str, Any],
+        merge: bool = False,
+    ) -> None:
+        if merge:
+            _CI_DEVICE_STATE.update(
+                deepcopy(data)
+            )
+        else:
+            _CI_DEVICE_STATE.clear()
+            _CI_DEVICE_STATE.update(
+                deepcopy(data)
+            )
+
+    def collection(
+        self,
+        collection_name: str,
+    ) -> _CICollectionReference:
+        return _CICollectionReference(
+            collection_name
+        )
+
 
 # ============================================================
 # FIREBASE / FIRESTORE
@@ -103,8 +406,11 @@ def initialize_firestore():
     """
     Initialize Firebase Admin SDK using the Render Secret File.
 
-    The credential JSON is never stored in source code.
+    In CI mode, Firebase is deliberately skipped.
     """
+
+    if CI_TEST_MODE:
+        return None
 
     if not firebase_admin._apps:
 
@@ -131,11 +437,14 @@ def initialize_firestore():
 db = initialize_firestore()
 
 
-device_ref = db.collection(
-    FIRESTORE_DEVICE_COLLECTION
-).document(
-    FIRESTORE_DEVICE_ID
-)
+if CI_TEST_MODE:
+    device_ref = _CIDeviceReference()
+else:
+    device_ref = db.collection(
+        FIRESTORE_DEVICE_COLLECTION
+    ).document(
+        FIRESTORE_DEVICE_ID
+    )
 
 
 # ============================================================
@@ -147,7 +456,10 @@ def utc_now() -> str:
 
     return datetime.now(
         timezone.utc
-    ).isoformat().replace("+00:00", "Z")
+    ).isoformat().replace(
+        "+00:00",
+        "Z",
+    )
 
 
 def generate_id(prefix: str) -> str:
@@ -314,12 +626,17 @@ class KonnexAdapter:
         )
 
         payload = {
-            "schema": "on1.physical-ai.konnex-mission.v1",
+            "schema": (
+                "on1.physical-ai."
+                "konnex-mission.v1"
+            ),
 
             "adapter": {
                 "name": "ON1 Konnex Adapter",
                 "version": self.version,
-                "status": KONNEX_ADAPTER_STATUS,
+                "status": (
+                    KONNEX_ADAPTER_STATUS
+                ),
             },
 
             "submission": {
@@ -377,13 +694,13 @@ class KonnexAdapter:
             "telemetry": {
                 "points": mission.get(
                     "telemetry",
-                    []
+                    [],
                 ),
 
                 "count": len(
                     mission.get(
                         "telemetry",
-                        []
+                        [],
                     )
                 ),
             },
@@ -476,13 +793,16 @@ konnex_adapter = KonnexAdapter()
 
 def load_device_state() -> dict[str, Any]:
     """
-    Load the existing device state from Firestore.
+    Load the existing device state.
 
-    Existing Firestore values are treated as the
-    persistent source of truth.
+    Production:
+        Firestore is the persistent source of truth.
 
-    In particular, an existing reputation value is
-    never replaced by the Python prototype default.
+    CI:
+        An isolated in-memory device state is used.
+
+    Existing production reputation is never replaced by the
+    Python prototype default.
     """
 
     snapshot = device_ref.get()
@@ -520,10 +840,11 @@ def save_device_state(
     robot: "Robot",
 ) -> None:
     """
-    Persist machine state to Firestore.
+    Persist machine state.
 
-    Existing device fields not managed by this backend
-    are preserved.
+    Production writes to Firestore.
+
+    CI writes only to the isolated in-memory test store.
     """
 
     device_ref.set(
@@ -562,7 +883,11 @@ def load_memory() -> list[
     dict[str, Any]
 ]:
     """
-    Load persistent machine memory from Firestore.
+    Load persistent machine memory.
+
+    Production reads Firestore.
+
+    CI reads the isolated in-memory store.
     """
 
     memory_ref = device_ref.collection(
@@ -596,6 +921,10 @@ def save_memory(
 ) -> None:
     """
     Persist a compact machine memory record.
+
+    Production writes Firestore.
+
+    CI writes only to the isolated in-memory store.
     """
 
     memory_id = memory[
@@ -621,8 +950,11 @@ def save_mission_evidence(
     """
     Persist the complete verified mission/evidence package.
 
-    This is intentionally separate from the compact machine
-    memory record.
+    Production writes to:
+
+        devices/{deviceId}/missions/{missionId}
+
+    CI writes to the isolated in-memory mission store.
 
     Machine memory answers:
         "What has this machine done?"
@@ -630,20 +962,6 @@ def save_mission_evidence(
     Mission evidence answers:
         "What exactly happened during this mission,
          and how was the work validated?"
-
-    The mission document is stored at:
-
-        devices/{deviceId}/missions/{missionId}
-
-    At this stage the mission must already contain:
-    - evidence
-    - validatorResult
-    - powpScore
-    - evidenceFingerprint
-    - Konnex adapter payload
-
-    This ensures Firebase receives the complete evidence
-    package in one coherent persistence step.
     """
 
     mission_id = mission[
@@ -659,10 +977,6 @@ def save_mission_evidence(
         "value"
     )
 
-    # The adapter should already have been created using
-    # the canonical fingerprint.
-    #
-    # The fallback exists only as a defensive measure.
     konnex_payload = mission.get(
         "konnexAdapter"
     )
@@ -765,18 +1079,12 @@ def save_mission_evidence(
             "onChainVerified": False,
         },
 
-        # The canonical fingerprint is now persisted
-        # together with the mission evidence.
         "evidenceFingerprint": (
             mission.get(
                 "evidenceFingerprint"
             )
         ),
 
-        # Konnex-ready representation.
-        #
-        # This is an adapter payload only.
-        # It is NOT a Konnex submission or verification.
         "konnexAdapter": (
             konnex_payload
         ),
@@ -803,14 +1111,7 @@ def update_mission_evidence_artifact(
     Add evidence-artifact metadata to an already persisted
     mission evidence record.
 
-    IMPORTANT:
-
-    The complete Konnex adapter is already persisted during
-    save_mission_evidence().
-
-    This function therefore does NOT replace the adapter with
-    a reduced object. It only adds the exported artifact
-    metadata and confirms the same canonical fingerprint.
+    The complete Konnex adapter remains untouched.
     """
 
     mission_ref = (
@@ -895,15 +1196,8 @@ class Robot:
             )
         )
 
-        # IMPORTANT:
-        # Existing Firestore reputation is used.
-        #
-        # Therefore:
-        # devices/on1-unit-01/reputation = 100
-        #
-        # remains 100 and is NOT replaced by
-        # the old Python prototype default of 50.
-
+        # Existing production Firestore reputation remains
+        # the source of truth.
         self.reputation_score = int(
             device_state.get(
                 "reputation",
@@ -1292,13 +1586,6 @@ class MissionEngine:
 
         # ----------------------------------------------------
         # STEP 10 — Persist complete mission evidence
-        #
-        # At this point the mission already contains:
-        # - evidence
-        # - validatorResult
-        # - PoPW score
-        # - canonical fingerprint
-        # - complete Konnex adapter
         # ----------------------------------------------------
 
         save_mission_evidence(
@@ -1598,8 +1885,7 @@ def run_mission() -> dict[str, Any]:
             )
         ),
 
-        # Expose the same Konnex-ready adapter package
-        # in the exported/API result.
+        # Expose the same Konnex-ready adapter package.
         "konnexAdapter": (
             mission.get(
                 "konnexAdapter"
@@ -1620,17 +1906,16 @@ def export_evidence(
     """
     Export the already-canonical mission evidence package.
 
-    IMPORTANT:
-
     This function does NOT create a second fingerprint.
 
     The canonical fingerprint was created during mission
     execution before the Konnex adapter was built.
 
     Therefore:
+
         mission fingerprint
         =
-        Firebase fingerprint
+        Firebase/CI fingerprint
         =
         Konnex adapter fingerprint
         =
@@ -1661,9 +1946,6 @@ def export_evidence(
             )
         )
 
-    # Defensive fallback for compatibility with an
-    # older result object that may not contain the
-    # top-level fingerprint.
     if not fingerprint:
 
         mission = result.get(
@@ -1697,8 +1979,6 @@ def export_evidence(
             "current evidence pipeline before export."
         )
 
-    # Ensure the top-level export and mission carry the
-    # exact same fingerprint object.
     result[
         "evidenceFingerprint"
     ] = {
@@ -1727,8 +2007,6 @@ def export_evidence(
         "evidenceFingerprint"
     ]
 
-    # Ensure the top-level Konnex adapter remains the exact
-    # adapter that was built using this fingerprint.
     if mission.get(
         "konnexAdapter"
     ):
@@ -1753,8 +2031,6 @@ def export_evidence(
 
         file.write("\n")
 
-    # Update the already-persisted mission evidence
-    # record with its exported artifact metadata.
     mission_id = mission.get(
         "missionId"
     )
@@ -1933,12 +2209,18 @@ def print_demo(
 
     print("MISSION EVIDENCE")
 
-    print(
-        "  Firestore: "
-        f"devices/{FIRESTORE_DEVICE_ID}/"
-        f"{FIRESTORE_MISSION_COLLECTION}/"
-        f"{mission['missionId']}"
-    )
+    if CI_TEST_MODE:
+        print(
+            "  Persistence: "
+            "GitHub Actions isolated CI memory"
+        )
+    else:
+        print(
+            "  Firestore: "
+            f"devices/{FIRESTORE_DEVICE_ID}/"
+            f"{FIRESTORE_MISSION_COLLECTION}/"
+            f"{mission['missionId']}"
+        )
 
     print()
 
