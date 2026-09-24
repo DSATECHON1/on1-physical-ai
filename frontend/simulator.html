@@ -829,7 +829,57 @@ function renderMemory(memory) {
     return;
   }
 
-  const latest = memory[0];
+  /*
+   * IMPORTANT:
+   * The backend may return memory records oldest-first.
+   * Do not assume memory[0] is the newest record.
+   *
+   * The authoritative memory timestamp is recordedAt.
+   * We create a copy before sorting so the original backend
+   * response remains untouched.
+   */
+
+  const sortedMemory = [...memory].sort((a, b) => {
+
+    const timeA =
+      Date.parse(a?.recordedAt || "");
+
+    const timeB =
+      Date.parse(b?.recordedAt || "");
+
+    /*
+     * Valid timestamps are sorted newest-first.
+     */
+
+    if (!Number.isNaN(timeA) && !Number.isNaN(timeB)) {
+      return timeB - timeA;
+    }
+
+    /*
+     * If only B has a valid timestamp, B is newer.
+     */
+
+    if (Number.isNaN(timeA) && !Number.isNaN(timeB)) {
+      return 1;
+    }
+
+    /*
+     * If only A has a valid timestamp, A is newer.
+     */
+
+    if (!Number.isNaN(timeA) && Number.isNaN(timeB)) {
+      return -1;
+    }
+
+    /*
+     * If neither timestamp is usable, preserve the
+     * backend's original order.
+     */
+
+    return 0;
+  });
+
+  const latest = sortedMemory[0];
 
   container.innerHTML = `
     <div class="row">
