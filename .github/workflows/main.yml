@@ -111,3 +111,29 @@ jobs:
           ON1_API_TEST: "1"
           ON1_CI_TEST: "1"
         run: python backend/api.py
+
+
+  protocol-test:
+    name: Test ON1 Protocol Miner → Validator Pipeline
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check Python version
+        run: python --version
+
+      - name: Run ON1 protocol integration test
+        run: python -m unittest protocol.test_protocol -v
+
+      - name: Confirm protocol test completed
+        run: |
+          echo "ON1 protocol integration test completed successfully."
+          echo "Mission Request → Miner → Evidence → Validator → PoPW → SHA-256"
