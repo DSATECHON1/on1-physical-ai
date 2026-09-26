@@ -155,19 +155,26 @@ class _CIDocumentReference:
         data: dict[str, Any],
         merge: bool = False,
     ) -> None:
+
         if self.collection_name == FIRESTORE_DEVICE_COLLECTION:
+
             if self.document_id != FIRESTORE_DEVICE_ID:
                 return
 
             if merge:
-                _CI_DEVICE_STATE.update(deepcopy(data))
+                _CI_DEVICE_STATE.update(
+                    deepcopy(data)
+                )
             else:
                 _CI_DEVICE_STATE.clear()
-                _CI_DEVICE_STATE.update(deepcopy(data))
+                _CI_DEVICE_STATE.update(
+                    deepcopy(data)
+                )
 
             return
 
         if self.collection_name == FIRESTORE_MEMORY_COLLECTION:
+
             existing = _CI_MEMORY.get(
                 self.document_id,
                 {},
@@ -182,6 +189,7 @@ class _CIDocumentReference:
             return
 
         if self.collection_name == FIRESTORE_MISSION_COLLECTION:
+
             existing = _CI_MISSIONS.get(
                 self.document_id,
                 {},
@@ -214,11 +222,17 @@ class _CIQuery:
         field: str,
         direction: Any = None,
     ) -> "_CIQuery":
+
         descending = False
 
         if direction is not None:
-            direction_text = str(direction).upper()
-            descending = "DESCENDING" in direction_text
+            direction_text = str(
+                direction
+            ).upper()
+
+            descending = (
+                "DESCENDING" in direction_text
+            )
 
         return _CIQuery(
             collection_name=self.collection_name,
@@ -227,7 +241,11 @@ class _CIQuery:
             result_limit=self.result_limit,
         )
 
-    def limit(self, count: int) -> "_CIQuery":
+    def limit(
+        self,
+        count: int,
+    ) -> "_CIQuery":
+
         return _CIQuery(
             collection_name=self.collection_name,
             order_field=self.order_field,
@@ -236,14 +254,22 @@ class _CIQuery:
         )
 
     def stream(self):
+
         if self.collection_name == FIRESTORE_MEMORY_COLLECTION:
-            records = list(_CI_MEMORY.values())
+            records = list(
+                _CI_MEMORY.values()
+            )
+
         elif self.collection_name == FIRESTORE_MISSION_COLLECTION:
-            records = list(_CI_MISSIONS.values())
+            records = list(
+                _CI_MISSIONS.values()
+            )
+
         else:
             records = []
 
         if self.order_field:
+
             records.sort(
                 key=lambda record: (
                     record.get(
@@ -256,7 +282,9 @@ class _CIQuery:
             )
 
         if self.result_limit is not None:
-            records = records[: self.result_limit]
+            records = records[
+                : self.result_limit
+            ]
 
         for record in records:
             yield _CISnapshot(record)
@@ -275,6 +303,7 @@ class _CICollectionReference:
         self,
         document_id: str,
     ) -> _CIDocumentReference:
+
         return _CIDocumentReference(
             self.collection_name,
             document_id,
@@ -285,6 +314,7 @@ class _CICollectionReference:
         field: str,
         direction: Any = None,
     ) -> _CIQuery:
+
         return _CIQuery(
             collection_name=self.collection_name
         ).order_by(
@@ -302,24 +332,34 @@ class _CIDeviceReference:
     """Root device reference with Firestore-like subcollections."""
 
     def get(self) -> _CISnapshot:
-        return _CISnapshot(_CI_DEVICE_STATE)
+        return _CISnapshot(
+            _CI_DEVICE_STATE
+        )
 
     def set(
         self,
         data: dict[str, Any],
         merge: bool = False,
     ) -> None:
+
         if merge:
-            _CI_DEVICE_STATE.update(deepcopy(data))
+            _CI_DEVICE_STATE.update(
+                deepcopy(data)
+            )
         else:
             _CI_DEVICE_STATE.clear()
-            _CI_DEVICE_STATE.update(deepcopy(data))
+            _CI_DEVICE_STATE.update(
+                deepcopy(data)
+            )
 
     def collection(
         self,
         collection_name: str,
     ) -> _CICollectionReference:
-        return _CICollectionReference(collection_name)
+
+        return _CICollectionReference(
+            collection_name
+        )
 
 
 # ============================================================
@@ -333,9 +373,11 @@ def initialize_firestore():
         return None
 
     if not firebase_admin._apps:
+
         if not Path(
             FIREBASE_CREDENTIALS_PATH
         ).exists():
+
             raise FileNotFoundError(
                 "Firebase credential file was not found at "
                 f"{FIREBASE_CREDENTIALS_PATH}"
@@ -345,7 +387,9 @@ def initialize_firestore():
             FIREBASE_CREDENTIALS_PATH
         )
 
-        firebase_admin.initialize_app(credential)
+        firebase_admin.initialize_app(
+            credential
+        )
 
     return firestore.client()
 
@@ -353,11 +397,19 @@ def initialize_firestore():
 db = initialize_firestore()
 
 if CI_TEST_MODE:
+
     device_ref = _CIDeviceReference()
+
 else:
+
     device_ref = (
-        db.collection(FIRESTORE_DEVICE_COLLECTION)
-        .document(FIRESTORE_DEVICE_ID)
+        db
+        .collection(
+            FIRESTORE_DEVICE_COLLECTION
+        )
+        .document(
+            FIRESTORE_DEVICE_ID
+        )
     )
 
 
@@ -368,15 +420,21 @@ else:
 def utc_now() -> str:
     """Return the current UTC timestamp in ISO 8601 format."""
 
-    return datetime.now(
-        timezone.utc
-    ).isoformat().replace(
-        "+00:00",
-        "Z",
+    return (
+        datetime.now(
+            timezone.utc
+        )
+        .isoformat()
+        .replace(
+            "+00:00",
+            "Z",
+        )
     )
 
 
-def generate_id(prefix: str) -> str:
+def generate_id(
+    prefix: str,
+) -> str:
     """Generate a short prototype identifier."""
 
     return (
@@ -410,24 +468,38 @@ def build_fingerprint_package(
 
     Volatile export metadata is excluded.
 
-    Telemetry timestamps are also excluded from the canonical
+    Telemetry timestamps are excluded from the canonical
     fingerprint because the protocol layer defines canonical
     evidence independently of execution-wall-clock timestamps.
     """
 
     canonical_telemetry = []
 
-    for point in mission.get("telemetry", []):
+    for point in mission.get(
+        "telemetry",
+        [],
+    ):
+
         canonical_telemetry.append(
             {
-                "step": point.get("step"),
-                "x": point.get("x"),
-                "y": point.get("y"),
+                "step": point.get(
+                    "step"
+                ),
+                "x": point.get(
+                    "x"
+                ),
+                "y": point.get(
+                    "y"
+                ),
                 "distanceFromTarget": point.get(
                     "distanceFromTarget"
                 ),
-                "battery": point.get("battery"),
-                "speed": point.get("speed"),
+                "battery": point.get(
+                    "battery"
+                ),
+                "speed": point.get(
+                    "speed"
+                ),
             }
         )
 
@@ -439,22 +511,43 @@ def build_fingerprint_package(
     return {
         "project": PROJECT_NAME,
         "prototypeVersion": PROTOTYPE_VERSION,
+
         "machine": {
-            "robotId": mission.get("robotId"),
+            "robotId": mission.get(
+                "robotId"
+            ),
             "identity": ROBOT_IDENTITY,
             "model": ROBOT_MODEL,
         },
+
         "mission": {
-            "missionId": mission.get("missionId"),
-            "taskType": mission.get("taskType"),
-            "start": mission.get("start"),
-            "target": mission.get("target"),
-            "status": mission.get("status"),
+            "missionId": mission.get(
+                "missionId"
+            ),
+            "taskType": mission.get(
+                "taskType"
+            ),
+            "start": mission.get(
+                "start"
+            ),
+            "target": mission.get(
+                "target"
+            ),
+            "status": mission.get(
+                "status"
+            ),
         },
+
         "telemetry": canonical_telemetry,
+
         "validation": {
-            "validatorId": validator.get("validatorId"),
-            "checks": validator.get("checks", {}),
+            "validatorId": validator.get(
+                "validatorId"
+            ),
+            "checks": validator.get(
+                "checks",
+                {},
+            ),
             "passedChecks": validator.get(
                 "passedChecks",
                 0,
@@ -468,6 +561,7 @@ def build_fingerprint_package(
                 False,
             ),
         },
+
         "powp": {
             "score": mission.get(
                 "powpScore",
@@ -478,6 +572,7 @@ def build_fingerprint_package(
                 "check ratio"
             ),
         },
+
         "integration": {
             "physicalHardware": False,
             "konnexVerified": False,
@@ -504,6 +599,7 @@ class KonnexAdapter:
         self,
         version: str = KONNEX_ADAPTER_VERSION,
     ) -> None:
+
         self.version = version
 
     def build_submission_payload(
@@ -527,11 +623,13 @@ class KonnexAdapter:
                 "on1.physical-ai."
                 "konnex-mission.v1"
             ),
+
             "adapter": {
                 "name": "ON1 Konnex Adapter",
                 "version": self.version,
                 "status": KONNEX_ADAPTER_STATUS,
             },
+
             "submission": {
                 "missionId": mission.get(
                     "missionId"
@@ -543,6 +641,7 @@ class KonnexAdapter:
                 "konnexVerified": False,
                 "onChainVerified": False,
             },
+
             "machine": {
                 "robotId": mission.get(
                     "robotId"
@@ -550,6 +649,7 @@ class KonnexAdapter:
                 "identity": ROBOT_IDENTITY,
                 "model": ROBOT_MODEL,
             },
+
             "mission": {
                 "taskType": mission.get(
                     "taskType"
@@ -570,6 +670,7 @@ class KonnexAdapter:
                     "status"
                 ),
             },
+
             "telemetry": {
                 "points": mission.get(
                     "telemetry",
@@ -582,6 +683,7 @@ class KonnexAdapter:
                     )
                 ),
             },
+
             "evidence": {
                 "evidenceId": evidence.get(
                     "evidenceId"
@@ -596,6 +698,7 @@ class KonnexAdapter:
                     "status"
                 ),
             },
+
             "validation": {
                 "validatorId": validator.get(
                     "validatorId"
@@ -616,6 +719,7 @@ class KonnexAdapter:
                     "validatedAt"
                 ),
             },
+
             "powp": {
                 "score": mission.get(
                     "powpScore",
@@ -626,16 +730,19 @@ class KonnexAdapter:
                     "check ratio"
                 ),
             },
+
             "evidenceFingerprint": {
                 "algorithm": "SHA-256",
                 "value": fingerprint,
                 "scope": EVIDENCE_FINGERPRINT_SCOPE,
             },
+
             "integration": {
                 "physicalHardware": False,
                 "konnexVerified": False,
                 "onChainVerified": False,
             },
+
             "preparedAt": utc_now(),
         }
 
@@ -653,6 +760,7 @@ def load_device_state() -> dict[str, Any]:
     snapshot = device_ref.get()
 
     if not snapshot.exists:
+
         initial_state = {
             "name": "ON1 Physical AI Unit 01",
             "connection_status": "online",
@@ -663,7 +771,9 @@ def load_device_state() -> dict[str, Any]:
             "reputation": 50,
         }
 
-        device_ref.set(initial_state)
+        device_ref.set(
+            initial_state
+        )
 
         return initial_state
 
@@ -678,15 +788,21 @@ def save_device_state(
     device_ref.set(
         {
             "connection_status": "online",
-            "operational_status": robot.status.lower(),
-            "mission_count": robot.mission_count,
+            "operational_status": (
+                robot.status.lower()
+            ),
+            "mission_count": (
+                robot.mission_count
+            ),
             "successful_missions": (
                 robot.successful_missions
             ),
             "failed_missions": (
                 robot.failed_missions
             ),
-            "reputation": robot.reputation_score,
+            "reputation": (
+                robot.reputation_score
+            ),
         },
         merge=True,
     )
@@ -712,6 +828,7 @@ def load_memory() -> list[dict[str, Any]]:
     memory = []
 
     for snapshot in snapshots:
+
         record = snapshot.to_dict()
 
         if record:
@@ -729,8 +846,12 @@ def save_memory(
 
     (
         device_ref
-        .collection(FIRESTORE_MEMORY_COLLECTION)
-        .document(memory_id)
+        .collection(
+            FIRESTORE_MEMORY_COLLECTION
+        )
+        .document(
+            memory_id
+        )
         .set(memory)
     )
 
@@ -751,13 +872,16 @@ def save_mission_evidence(
         {},
     )
 
-    fingerprint = fingerprint_data.get("value")
+    fingerprint = fingerprint_data.get(
+        "value"
+    )
 
     konnex_payload = mission.get(
         "konnexAdapter"
     )
 
     if konnex_payload is None:
+
         konnex_payload = (
             konnex_adapter.build_submission_payload(
                 mission,
@@ -769,50 +893,68 @@ def save_mission_evidence(
         "recordType": "mission_evidence",
         "project": PROJECT_NAME,
         "prototypeVersion": PROTOTYPE_VERSION,
+
         "missionId": mission_id,
         "robotId": mission["robotId"],
         "taskType": mission["taskType"],
+
         "start": mission["start"],
         "target": mission["target"],
+
         "startedAt": mission["startedAt"],
         "completedAt": mission["completedAt"],
         "status": mission["status"],
+
         "telemetry": mission["telemetry"],
         "evidence": mission["evidence"],
-        "validatorResult": mission[
-            "validatorResult"
-        ],
+
+        "validatorResult": (
+            mission["validatorResult"]
+        ),
+
         "powpScore": mission["powpScore"],
+
         "verification": {
             "verified": mission[
                 "validatorResult"
             ]["verified"],
+
             "validatorId": mission[
                 "validatorResult"
             ]["validatorId"],
+
             "passedChecks": mission[
                 "validatorResult"
             ]["passedChecks"],
+
             "totalChecks": mission[
                 "validatorResult"
             ]["totalChecks"],
         },
+
         "integration": {
             "physicalHardware": False,
             "konnexVerified": False,
             "onChainVerified": False,
         },
+
         "evidenceFingerprint": mission.get(
             "evidenceFingerprint"
         ),
+
         "konnexAdapter": konnex_payload,
+
         "persistedAt": utc_now(),
     }
 
     (
         device_ref
-        .collection(FIRESTORE_MISSION_COLLECTION)
-        .document(mission_id)
+        .collection(
+            FIRESTORE_MISSION_COLLECTION
+        )
+        .document(
+            mission_id
+        )
         .set(
             mission_record,
             merge=True,
@@ -829,23 +971,33 @@ def update_mission_evidence_artifact(
 
     mission_ref = (
         device_ref
-        .collection(FIRESTORE_MISSION_COLLECTION)
-        .document(mission_id)
+        .collection(
+            FIRESTORE_MISSION_COLLECTION
+        )
+        .document(
+            mission_id
+        )
     )
 
     mission_ref.set(
         {
             "evidenceArtifact": {
-                "path": str(output_path),
+                "path": str(
+                    output_path
+                ),
                 "sha256": fingerprint,
                 "algorithm": "SHA-256",
-                "scope": EVIDENCE_FINGERPRINT_SCOPE,
+                "scope": (
+                    EVIDENCE_FINGERPRINT_SCOPE
+                ),
             },
+
             "integration": {
                 "physicalHardware": False,
                 "konnexVerified": False,
                 "onChainVerified": False,
             },
+
             "fingerprintedAt": utc_now(),
         },
         merge=True,
@@ -909,13 +1061,18 @@ class Robot:
     ) -> None:
 
         if verified:
+
             self.successful_missions += 1
+
             self.reputation_score = min(
                 100,
                 self.reputation_score + 5,
             )
+
         else:
+
             self.failed_missions += 1
+
             self.reputation_score = max(
                 0,
                 self.reputation_score - 5,
@@ -929,9 +1086,18 @@ class Robot:
     ) -> None:
 
         memory = {
-            "memoryId": generate_id("MEM"),
-            "missionId": mission["missionId"],
-            "taskType": mission["taskType"],
+            "memoryId": generate_id(
+                "MEM"
+            ),
+
+            "missionId": mission[
+                "missionId"
+            ],
+
+            "taskType": mission[
+                "taskType"
+            ],
+
             "result": (
                 "Verified"
                 if mission[
@@ -939,31 +1105,47 @@ class Robot:
                 ]["verified"]
                 else "Failed"
             ),
-            "powpScore": mission["powpScore"],
+
+            "powpScore": mission[
+                "powpScore"
+            ],
+
             "recordedAt": utc_now(),
         }
 
-        self.memory.append(memory)
+        self.memory.append(
+            memory
+        )
 
         save_memory(memory)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(
+        self,
+    ) -> dict[str, Any]:
 
         return {
             "robotId": self.robot_id,
             "identity": self.identity,
             "model": self.model,
+
             "status": self.status,
-            "missionCount": self.mission_count,
+
+            "missionCount": (
+                self.mission_count
+            ),
+
             "successfulMissions": (
                 self.successful_missions
             ),
+
             "failedMissions": (
                 self.failed_missions
             ),
+
             "reputationScore": (
                 self.reputation_score
             ),
+
             "memory": self.memory,
         }
 
@@ -978,10 +1160,12 @@ class MissionEngine:
         self,
         robot: Robot,
     ) -> None:
+
         self.robot = robot
 
         # The protocol layer is now the authoritative
         # Miner -> Validator implementation.
+
         self.protocol_miner = Miner(
             machine=MachineIdentity(
                 robot_id=self.robot.robot_id,
@@ -1005,13 +1189,19 @@ class MissionEngine:
         target: tuple[int, int] = (10, 10),
     ) -> dict[str, Any]:
 
-        mission_id = generate_id("MSN")
+        mission_id = generate_id(
+            "MSN"
+        )
+
         started_at = utc_now()
 
         self.robot.status = "EXECUTING"
+
         self.robot.mission_count += 1
 
-        save_device_state(self.robot)
+        save_device_state(
+            self.robot
+        )
 
         # ----------------------------------------------------
         # STEP 1 — Build protocol mission request
@@ -1019,16 +1209,20 @@ class MissionEngine:
 
         mission_request = MissionRequest(
             mission_id=mission_id,
+
             task_type="Navigation",
+
             machine=MachineIdentity(
                 robot_id=self.robot.robot_id,
                 identity=self.robot.identity,
                 model=self.robot.model,
             ),
+
             start=MissionTarget(
                 x=float(start[0]),
                 y=float(start[1]),
             ),
+
             target=MissionTarget(
                 x=float(target[0]),
                 y=float(target[1]),
@@ -1039,14 +1233,18 @@ class MissionEngine:
         # STEP 2 — Execute through the protocol Miner
         # ----------------------------------------------------
 
-        miner_result = self.protocol_miner.execute(
-            mission_request
+        miner_result = (
+            self.protocol_miner.execute(
+                mission_request
+            )
         )
 
-        protocol_evidence = miner_result.evidence
+        protocol_evidence = (
+            miner_result.evidence
+        )
 
         # ----------------------------------------------------
-        # STEP 3 — Validate through the protocol Validator
+        # STEP 3 — Validate through protocol Validator
         # ----------------------------------------------------
 
         protocol_validation = (
@@ -1056,9 +1254,24 @@ class MissionEngine:
             )
         )
 
+        # IMPORTANT:
+        #
+        # Validator.validate() returns ValidatorResult.
+        #
+        # The actual ValidationResult is stored inside:
+        #
+        #     protocol_validation.validation
+        #
+        # This is the correction responsible for the
+        # previous GitHub Actions failure.
+
+        validation = (
+            protocol_validation.validation
+        )
+
         # ----------------------------------------------------
         # STEP 4 — Convert protocol evidence into the
-        #          existing backend mission schema
+        # existing backend mission schema
         # ----------------------------------------------------
 
         telemetry = [
@@ -1066,85 +1279,135 @@ class MissionEngine:
             for point in protocol_evidence.telemetry
         ]
 
-        telemetry_count = len(telemetry)
+        telemetry_count = len(
+            telemetry
+        )
 
         mission = {
             "missionId": mission_id,
+
             "robotId": self.robot.robot_id,
+
             "taskType": "Navigation",
+
             "start": {
                 "x": start[0],
                 "y": start[1],
             },
+
             "target": {
                 "x": target[0],
                 "y": target[1],
             },
+
             "startedAt": started_at,
-            "completedAt": protocol_evidence.completed_at,
+
+            "completedAt": (
+                protocol_evidence.completed_at
+            ),
+
             "telemetry": telemetry,
-            "status": protocol_evidence.status,
+
+            "status": (
+                protocol_evidence.status
+            ),
         }
 
         # ----------------------------------------------------
         # STEP 5 — Generate backend-compatible evidence
-        #
-        # The evidence object remains available in the
-        # existing backend schema while its execution source
-        # is now the protocol Miner.
         # ----------------------------------------------------
 
         mission["evidence"] = {
-            "evidenceId": protocol_evidence.evidence_id,
+            "evidenceId": (
+                protocol_evidence.evidence_id
+            ),
+
             "missionId": mission_id,
+
             "robotId": self.robot.robot_id,
+
             "taskType": "Navigation",
-            "startPosition": mission["start"],
-            "targetPosition": mission["target"],
+
+            "startPosition": mission[
+                "start"
+            ],
+
+            "targetPosition": mission[
+                "target"
+            ],
+
             "telemetryPoints": telemetry_count,
+
             "missionStartedAt": started_at,
-            "missionCompletedAt": protocol_evidence.completed_at,
-            "status": protocol_evidence.status,
-            "generatedAt": protocol_evidence.generated_at,
-            "executionMode": protocol_evidence.execution_mode,
+
+            "missionCompletedAt": (
+                protocol_evidence.completed_at
+            ),
+
+            "status": (
+                protocol_evidence.status
+            ),
+
+            "generatedAt": (
+                protocol_evidence.generated_at
+            ),
+
+            "executionMode": (
+                protocol_evidence.execution_mode
+            ),
+
             "hardwareRooted": False,
+
             "konnexVerified": False,
+
             "onChainVerified": False,
         }
 
         # ----------------------------------------------------
-        # STEP 6 — Convert protocol validation into the
+        # STEP 6 — Convert protocol ValidationResult into
         #          existing backend validator schema
+        #
+        # FIX:
+        # Validation fields come from:
+        # protocol_validation.validation
         # ----------------------------------------------------
 
         mission["validatorResult"] = {
+
             "validatorId": (
-                protocol_validation.validator_id
+                validation.validator_id
             ),
+
             "validatedAt": (
-                protocol_validation.validated_at
+                validation.validated_at
             ),
+
             "checks": dict(
-                protocol_validation.checks
+                validation.checks
             ),
+
             "passedChecks": (
-                protocol_validation.passed_checks
+                validation.passed_checks
             ),
+
             "totalChecks": (
-                protocol_validation.total_checks
+                validation.total_checks
             ),
+
             "verified": (
-                protocol_validation.verified
+                validation.verified
             ),
         }
 
         # ----------------------------------------------------
-        # STEP 7 — PoPW-style score comes from the
-        #          protocol Validator result
+        # STEP 7 — PoPW-style score
+        #
+        # FIX:
+        # score is also part of ValidationResult.
         # ----------------------------------------------------
 
         mission["powpScore"] = int(
-            protocol_validation.score
+            validation.score
         )
 
         # ----------------------------------------------------
@@ -1163,11 +1426,20 @@ class MissionEngine:
             )
         )
 
-        mission["evidenceFingerprint"] = {
+        mission[
+            "evidenceFingerprint"
+        ] = {
+
             "algorithm": "SHA-256",
+
             "value": evidence_fingerprint,
-            "scope": EVIDENCE_FINGERPRINT_SCOPE,
+
+            "scope": (
+                EVIDENCE_FINGERPRINT_SCOPE
+            ),
+
             "konnexVerified": False,
+
             "onChainVerified": False,
         }
 
@@ -1175,7 +1447,9 @@ class MissionEngine:
         # STEP 9 — Build Konnex adapter
         # ----------------------------------------------------
 
-        mission["konnexAdapter"] = (
+        mission[
+            "konnexAdapter"
+        ] = (
             konnex_adapter.build_submission_payload(
                 mission,
                 fingerprint=evidence_fingerprint,
@@ -1225,7 +1499,9 @@ class MissionEngine:
 
 robot = Robot()
 
-engine = MissionEngine(robot)
+engine = MissionEngine(
+    robot
+)
 
 
 # ============================================================
@@ -1236,9 +1512,15 @@ def register_robot() -> dict[str, Any]:
 
     return {
         "project": PROJECT_NAME,
-        "prototypeVersion": PROTOTYPE_VERSION,
+
+        "prototypeVersion": (
+            PROTOTYPE_VERSION
+        ),
+
         "registered": True,
+
         "registeredAt": utc_now(),
+
         "robot": robot.to_dict(),
     }
 
@@ -1249,25 +1531,39 @@ def register_robot() -> dict[str, Any]:
 
 def run_mission() -> dict[str, Any]:
 
-    mission = engine.execute_navigation()
+    mission = (
+        engine.execute_navigation()
+    )
 
     return {
         "project": PROJECT_NAME,
-        "prototypeVersion": PROTOTYPE_VERSION,
+
+        "prototypeVersion": (
+            PROTOTYPE_VERSION
+        ),
+
         "simulation": {
             "type": "backend",
+
             "hardwareConnected": False,
+
             "konnexIntegrated": False,
+
             "onChainVerified": False,
         },
+
         "generatedAt": utc_now(),
+
         "robot": robot.to_dict(),
+
         "mission": mission,
+
         "evidenceFingerprint": (
             mission.get(
                 "evidenceFingerprint"
             )
         ),
+
         "konnexAdapter": (
             mission.get(
                 "konnexAdapter"
@@ -1294,8 +1590,10 @@ def export_evidence(
         exist_ok=True,
     )
 
-    evidence_fingerprint = result.get(
-        "evidenceFingerprint"
+    evidence_fingerprint = (
+        result.get(
+            "evidenceFingerprint"
+        )
     )
 
     fingerprint = None
@@ -1304,39 +1602,58 @@ def export_evidence(
         evidence_fingerprint,
         dict,
     ):
-        fingerprint = evidence_fingerprint.get(
-            "value"
+
+        fingerprint = (
+            evidence_fingerprint.get(
+                "value"
+            )
         )
 
     if not fingerprint:
+
         mission = result.get(
             "mission",
             {},
         )
 
-        mission_fingerprint = mission.get(
-            "evidenceFingerprint",
-            {},
+        mission_fingerprint = (
+            mission.get(
+                "evidenceFingerprint",
+                {},
+            )
         )
 
         if isinstance(
             mission_fingerprint,
             dict,
         ):
-            fingerprint = mission_fingerprint.get(
-                "value"
+
+            fingerprint = (
+                mission_fingerprint.get(
+                    "value"
+                )
             )
 
     if not fingerprint:
+
         raise ValueError(
             "Canonical evidence fingerprint is missing."
         )
 
-    result["evidenceFingerprint"] = {
+    result[
+        "evidenceFingerprint"
+    ] = {
+
         "algorithm": "SHA-256",
+
         "value": fingerprint,
-        "scope": EVIDENCE_FINGERPRINT_SCOPE,
+
+        "scope": (
+            EVIDENCE_FINGERPRINT_SCOPE
+        ),
+
         "konnexVerified": False,
+
         "onChainVerified": False,
     }
 
@@ -1345,19 +1662,27 @@ def export_evidence(
         {},
     )
 
-    mission["evidenceFingerprint"] = (
-        result["evidenceFingerprint"]
-    )
+    mission[
+        "evidenceFingerprint"
+    ] = result[
+        "evidenceFingerprint"
+    ]
 
-    if mission.get("konnexAdapter"):
-        result["konnexAdapter"] = (
-            mission["konnexAdapter"]
-        )
+    if mission.get(
+        "konnexAdapter"
+    ):
+
+        result[
+            "konnexAdapter"
+        ] = mission[
+            "konnexAdapter"
+        ]
 
     with OUTPUT_FILE.open(
         "w",
         encoding="utf-8",
     ) as file:
+
         json.dump(
             result,
             file,
@@ -1372,6 +1697,7 @@ def export_evidence(
     )
 
     if mission_id:
+
         update_mission_evidence_artifact(
             mission_id=mission_id,
             output_path=OUTPUT_FILE,
@@ -1394,50 +1720,74 @@ def print_demo(
     fingerprint: str,
 ) -> None:
 
-    mission = result["mission"]
-    validator = mission["validatorResult"]
+    mission = result[
+        "mission"
+    ]
+
+    validator = mission[
+        "validatorResult"
+    ]
 
     print()
+
     print("=" * 60)
+
     print(
         "ON1 PHYSICAL AI — "
         "BACKEND MISSION ENGINE"
     )
+
     print("=" * 60)
 
     print()
+
     print("PROJECT")
-    print(PROJECT_NAME)
+
+    print(
+        PROJECT_NAME
+    )
 
     print()
+
     print("PROTOTYPE VERSION")
-    print(PROTOTYPE_VERSION)
+
+    print(
+        PROTOTYPE_VERSION
+    )
 
     print()
+
     print("ROBOT")
+
     print(
         f"  Robot ID: "
         f"{result['robot']['robotId']}"
     )
+
     print(
         f"  Identity: "
         f"{result['robot']['identity']}"
     )
+
     print(
         f"  Model: "
         f"{result['robot']['model']}"
     )
 
     print()
+
     print("MISSION")
+
     print(
         f"  Mission ID: "
         f"{mission['missionId']}"
     )
+
     print(
         f"  Task: "
         f"{mission['taskType']}"
     )
+
     print(
         f"  Route: "
         f"({mission['start']['x']}, "
@@ -1448,72 +1798,96 @@ def print_demo(
     )
 
     print()
+
     print("PROTOCOL")
-    print("  Miner: ON1-MINER-BACKEND-001")
+
+    print(
+        "  Miner: "
+        "ON1-MINER-BACKEND-001"
+    )
+
     print(
         "  Validator: "
         f"{validator['validatorId']}"
     )
 
     print()
+
     print("TELEMETRY")
+
     print(
         f"  Points: "
         f"{len(mission['telemetry'])}"
     )
 
     print()
+
     print("EVIDENCE")
+
     print(
         f"  Evidence ID: "
         f"{mission['evidence']['evidenceId']}"
     )
+
     print(
         "  Execution mode: "
         f"{mission['evidence']['executionMode']}"
     )
 
     print()
+
     print("VALIDATION")
+
     print(
         f"  Passed: "
         f"{validator['passedChecks']}/"
         f"{validator['totalChecks']}"
     )
+
     print(
         f"  Verified: "
         f"{validator['verified']}"
     )
 
     print()
+
     print("PoPW-STYLE SCORE")
+
     print(
         f"  {mission['powpScore']}/100"
     )
 
     print()
+
     print("REPUTATION")
+
     print(
         f"  Score: "
         f"{result['robot']['reputationScore']}/100"
     )
 
     print()
+
     print("MEMORY")
+
     print(
         f"  Records: "
         f"{len(result['robot']['memory'])}"
     )
 
     print()
+
     print("MISSION EVIDENCE")
 
     if CI_TEST_MODE:
+
         print(
             "  Persistence: "
             "GitHub Actions isolated CI memory"
         )
+
     else:
+
         print(
             "  Firestore: "
             f"devices/{FIRESTORE_DEVICE_ID}/"
@@ -1522,39 +1896,75 @@ def print_demo(
         )
 
     print()
+
     print("EVIDENCE ARTIFACT")
-    print(f"  {output_path}")
+
+    print(
+        f"  {output_path}"
+    )
 
     print()
-    print("LOCAL SHA-256 FINGERPRINT")
-    print(f"  {fingerprint}")
+
+    print(
+        "LOCAL SHA-256 FINGERPRINT"
+    )
+
+    print(
+        f"  {fingerprint}"
+    )
 
     print()
+
     print("KONNEX ADAPTER")
+
     print(
         f"  Version: "
         f"{KONNEX_ADAPTER_VERSION}"
     )
+
     print(
         f"  Status: "
         f"{KONNEX_ADAPTER_STATUS}"
     )
-    print("  Fingerprint attached: True")
-    print("  Submitted: False")
-    print("  Konnex verified: False")
+
+    print(
+        "  Fingerprint attached: True"
+    )
+
+    print(
+        "  Submitted: False"
+    )
+
+    print(
+        "  Konnex verified: False"
+    )
 
     print()
+
     print("KONNEX")
-    print("  Integrated: False")
+
+    print(
+        "  Integrated: False"
+    )
 
     print()
+
     print("ON-CHAIN")
-    print("  Verified: False")
+
+    print(
+        "  Verified: False"
+    )
 
     print()
+
     print("=" * 60)
-    print("MISSION COMPLETE")
+
+    print(
+        "MISSION COMPLETE"
+    )
+
     print("=" * 60)
+
     print()
 
 
@@ -1564,17 +1974,25 @@ def print_demo(
 
 if __name__ == "__main__":
 
-    registration = register_robot()
+    registration = (
+        register_robot()
+    )
 
     print(
         "Robot registered:",
-        registration["robot"]["robotId"],
+        registration[
+            "robot"
+        ][
+            "robotId"
+        ],
     )
 
     result = run_mission()
 
     output_path, fingerprint = (
-        export_evidence(result)
+        export_evidence(
+            result
+        )
     )
 
     print_demo(
