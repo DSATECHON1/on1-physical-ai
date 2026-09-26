@@ -16,7 +16,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 
@@ -38,16 +38,20 @@ def calculate_distance(
     """Calculate Euclidean distance between two 2D coordinates."""
     dx = float(target[0]) - float(start[0])
     dy = float(target[1]) - float(start[1])
+
     return math.sqrt((dx * dx) + (dy * dy))
 
 
-def calculate_evidence_fingerprint(payload: Dict[str, Any]) -> str:
+def calculate_evidence_fingerprint(
+    payload: Dict[str, Any],
+) -> str:
     """
     Generate a deterministic SHA-256 fingerprint.
 
     JSON keys are sorted and separators are canonicalized so equivalent
     dictionaries produce the same fingerprint.
     """
+
     canonical_json = json.dumps(
         payload,
         sort_keys=True,
@@ -113,7 +117,9 @@ class TelemetryPoint:
             "step": int(self.step),
             "x": float(self.x),
             "y": float(self.y),
-            "distanceFromTarget": float(self.distance_from_target),
+            "distanceFromTarget": float(
+                self.distance_from_target
+            ),
             "battery": float(self.battery),
             "speed": float(self.speed),
         }
@@ -276,10 +282,31 @@ def build_canonical_evidence_payload(
     """
     Build the canonical payload used for fingerprinting.
 
-    Mutable transport metadata, timestamps generated outside the core
-    evidence model, adapter metadata, and the fingerprint itself are
-    deliberately excluded.
+    The canonical payload contains stable mission and execution state.
+
+    Volatile timestamps are deliberately excluded because two identical
+    executions at different times must produce the same canonical
+    fingerprint.
+
+    Timestamps remain available in the full evidence object and are
+    therefore not lost from the mission record.
     """
+
+    canonical_telemetry = []
+
+    for point in evidence.telemetry:
+        canonical_telemetry.append(
+            {
+                "step": int(point.step),
+                "x": float(point.x),
+                "y": float(point.y),
+                "distanceFromTarget": float(
+                    point.distance_from_target
+                ),
+                "battery": float(point.battery),
+                "speed": float(point.speed),
+            }
+        )
 
     return {
         "schema": SCHEMA_NAME,
@@ -292,10 +319,7 @@ def build_canonical_evidence_payload(
             "target": mission_request.target.to_dict(),
             "status": evidence.status,
         },
-        "telemetry": [
-            point.to_dict()
-            for point in evidence.telemetry
-        ],
+        "telemetry": canonical_telemetry,
         "validation": {
             "validatorId": validation.validator_id,
             "checks": dict(validation.checks),
@@ -324,6 +348,7 @@ def fingerprint_mission_response(
     powp_score: float,
 ) -> str:
     """Calculate the canonical SHA-256 fingerprint for a mission."""
+
     canonical_payload = build_canonical_evidence_payload(
         mission_request=mission_request,
         evidence=evidence,
@@ -331,4 +356,6 @@ def fingerprint_mission_response(
         powp_score=powp_score,
     )
 
-    return calculate_evidence_fingerprint(canonical_payload)
+    return calculate_evidence_fingerprint(
+        canonical_payload
+    )
