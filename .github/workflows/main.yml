@@ -137,3 +137,38 @@ jobs:
         run: |
           echo "ON1 protocol integration test completed successfully."
           echo "Mission Request → Miner → Evidence → Validator → PoPW → SHA-256"
+
+
+  fetch-policy-test:
+    name: Test ON1 Fetch Policy Compatibility
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check Python version
+        run: python --version
+
+      - name: Install Fetch policy dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch
+
+      - name: Run Fetch policy compatibility tests
+        working-directory: models/fetch
+        run: python -m unittest test_fetch_policy -v
+
+      - name: Confirm Fetch policy compatibility
+        run: |
+          echo "ON1 Fetch policy compatibility tests completed successfully."
+          echo "Observation → Preprocessing → 13-D Action → Validation"
+          echo "Control mode: pd_joint_delta_pos"
+          echo "Observation mode: state"
+          echo "Action range: [-1, 1]"
