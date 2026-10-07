@@ -156,14 +156,14 @@ jobs:
       - name: Check Python version
         run: python --version
 
-      - name: Install Fetch policy dependencies
+      - name: Install Fetch policy test dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install torch
+          pip install torch pytest
 
       - name: Run Fetch policy compatibility tests
         working-directory: models/fetch
-        run: python -m unittest test_fetch_policy -v
+        run: python -m pytest test_fetch_policy.py -v
 
       - name: Confirm Fetch policy compatibility
         run: |
